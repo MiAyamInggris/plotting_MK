@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  KAPRODI
+  KETUA_KK
+}
+
+enum SemesterTipe {
+  GANJIL
+  GENAP
+}
+
+enum Jenjang {
+  S1
+  D3
+}
+
+enum TingkatPendidikan {
+  S2
+  S3
+  ON_GOING_S3
+}
+
+model ProgramStudi {
+  id      String  @id @default(cuid())
+  kode    String  @unique
+  nama    String
+  jenjang Jenjang
+  aktif   Boolean @default(true)
+
+  dosenHomebase   Dosen[]          @relation("DosenHomebase")
+  mataKuliah      MataKuliah[]
+  courseOfferings CourseOffering[]
+  users           User[]
+  prodiTargets    ProdiTarget[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kode])
+}
+
+model KelompokKeahlian {
+  id          String  @id @default(cuid())
+  nama        String  @unique
+  kodeSingkat String?
+
+  dosen Dosen[]
+  users User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nama])
+}
+
+model CenterOfExcellence {
+  id   String @id @default(cuid())
+  nama String @unique
+
+  dosen Dosen[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nama])
+}
+
+model Dosen {
+  id                String             @id @default(cuid())
+  kode              String             @unique
+  nama              String
+  namaTanpaGelar    String
+  nipYpt            String?
+  nidn              String?
+  jfa               String?
+  tmtJfa            DateTime?
+  homebaseProdiId   String?
+  homebaseProdi     ProgramStudi?      @relation("DosenHomebase", fields: [homebaseProdiId], references: [id])
+  tingkatPendidikan TingkatPendidikan?
+  kkId              String?
+  kk                KelompokKeahlian?  @relation(fields: [kkId], references: [id])
+  coeId             String?
+  coe               CenterOfExcellence? @relation(fields: [coeId], references: [id])
+  bebanStruktural   String?
+  aktif             Boolean            @default(true)
+
+  kelas Kelas[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kode])
+  @@index([homebaseProdiId])
+  @@index([kkId])
+  @@index([coeId])
+}
+
+model MataKuliah {
+  id      String  @id @default(cuid())
+  kodeMK  String
+  nama    String
+  sks     Float
+  prodiId String
+  prodi   ProgramStudi @relation(fields: [prodiId], references: [id])
+  ket     String?
+
+  courseOfferings CourseOffering[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kodeMK, prodiId])
+  @@index([prodiId])
+  @@index([kodeMK])
+}
+
+model SemesterPeriode {
+  id          String       @id @default(cuid())
+  nama        String
+  tipe        SemesterTipe
+  tahunAjaran String
+  aktif       Boolean      @default(false)
+
+  courseOfferings CourseOffering[]
+  prodiTargets    ProdiTarget[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aktif])
+}
+
+// Configurable per-prodi, per-period staffing target ("Kebutuhan SKS"),
+// mirroring row 1 of the source workbook's Beban Dosen sheet.
+model ProdiTarget {
+  id                String          @id @default(cuid())
+  prodiId           String
+  prodi             ProgramStudi    @relation(fields: [prodiId], references: [id])
+  semesterPeriodeId String
+  semesterPeriode   SemesterPeriode @relation(fields: [semesterPeriodeId], references: [id])
+  kebutuhanSks      Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([prodiId, semesterPeriodeId])
+}
+
+model CourseOffering {
+  id                String   @id @default(cuid())
+  mataKuliahId      String
+  mataKuliah        MataKuliah @relation(fields: [mataKuliahId], references: [id])
+  semesterPeriodeId String
+  semesterPeriode   SemesterPeriode @relation(fields: [semesterPeriodeId], references: [id])
+  semesterKe        Int
+  tahunAngkatan     Int
+  prodiId           String
+  prodi             ProgramStudi @relation(fields: [prodiId], references: [id])
+  kelasPrefix       String
+
+  kelas Kelas[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([mataKuliahId, kelasPrefix])
+  @@index([semesterPeriodeId, prodiId])
+  @@index([mataKuliahId])
+  @@index([prodiId])
+}
+
+model Kelas {
+  id               String   @id @default(cuid())
+  courseOfferingId String
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id])
+  kodeKelas        String
+  sectionSuffix    String
+  sks              Float
+  dosenId          String?
+  dosen            Dosen?   @relation(fields: [dosenId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseOfferingId, sectionSuffix])
+  @@index([courseOfferingId])
+  @@index([dosenId])
+  @@index([kodeKelas])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  prodiId      String?
+  prodi        ProgramStudi?     @relation(fields: [prodiId], references: [id])
+  kkId         String?
+  kk           KelompokKeahlian? @relation(fields: [kkId], references: [id])
+  aktif        Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([prodiId])
+  @@index([kkId])
+}
