@@ -172,7 +172,7 @@ export default function ImportClient() {
       />
       <ImportSection
         title="C. Dosen email"
-        description="KODE / NAMA / E-MAIL rows, matched to existing dosen by KODE. Run before generating dosen login accounts."
+        description='Sheet "Lembar1" from KODE DOSEN SHARE MAHASISWA.xlsx, matched to existing dosen by KODE. Also backfills NIP if the master has none. Run before generating dosen login accounts.'
         uploadUrl="/api/import/dosen-email"
         localUrl="/api/import/dosen-email/local"
         accept=".xlsx,.xls,.csv,.tsv"

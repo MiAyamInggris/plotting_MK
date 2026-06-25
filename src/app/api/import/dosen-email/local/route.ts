@@ -7,7 +7,7 @@ import { importDosenEmail } from "@/lib/import/dosenEmail";
 
 // Local-development convenience: import directly from the gitignored data/
 // folder without a manual upload. Not intended for production use.
-const LOCAL_PATH = path.join(process.cwd(), "data", "dosen-email.tsv");
+const LOCAL_PATH = path.join(process.cwd(), "data", "KODE DOSEN SHARE MAHASISWA.xlsx");
 
 export async function POST() {
   const user = await getSessionUser();
