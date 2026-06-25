@@ -6,6 +6,7 @@ export type AuthUser = {
   role: Role;
   prodiId?: string | null;
   kkId?: string | null;
+  dosenId?: string | null;
 };
 
 export function canManageUsers(user: AuthUser | null | undefined): boolean {

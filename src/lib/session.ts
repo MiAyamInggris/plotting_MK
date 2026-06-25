@@ -9,5 +9,6 @@ export async function getSessionUser(): Promise<AuthUser | null> {
     role: session.user.role,
     prodiId: session.user.prodiId,
     kkId: session.user.kkId,
+    dosenId: session.user.dosenId,
   };
 }

@@ -69,11 +69,13 @@ function ImportSection({
   description,
   uploadUrl,
   localUrl,
+  accept = ".xlsx,.xls",
 }: {
   title: string;
   description: string;
   uploadUrl: string;
   localUrl: string;
+  accept?: string;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -124,7 +126,7 @@ function ImportSection({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xlsx,.xls"
+            accept={accept}
             className="text-sm text-muted-foreground"
           />
           <Button onClick={() => runImport({ local: false })} disabled={busy}>
@@ -167,6 +169,13 @@ export default function ImportClient() {
         description="Per-prodi sheets plus Beban Dosen from Plotting MK Tawar KK Semester Ganjil 2025_2026.xlsx."
         uploadUrl="/api/import/plotting"
         localUrl="/api/import/plotting/local"
+      />
+      <ImportSection
+        title="C. Dosen email"
+        description="KODE / NAMA / E-MAIL rows, matched to existing dosen by KODE. Run before generating dosen login accounts."
+        uploadUrl="/api/import/dosen-email"
+        localUrl="/api/import/dosen-email/local"
+        accept=".xlsx,.xls,.csv,.tsv"
       />
     </div>
   );

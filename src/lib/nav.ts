@@ -12,6 +12,7 @@ import {
   Upload,
   UserCog,
   CalendarClock,
+  UserRound,
 } from "lucide-react";
 
 export type NavGroup = "Overview" | "Master Data" | "Administration";
@@ -101,6 +102,13 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["ADMIN"],
     icon: UserCog,
     group: "Administration",
+  },
+  {
+    href: "/my-beban",
+    label: "My Beban",
+    roles: ["DOSEN"],
+    icon: UserRound,
+    group: "Overview",
   },
 ];
 

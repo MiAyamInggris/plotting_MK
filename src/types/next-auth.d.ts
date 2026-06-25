@@ -6,6 +6,7 @@ declare module "next-auth" {
     role: Role;
     prodiId: string | null;
     kkId: string | null;
+    dosenId: string | null;
   }
 
   interface Session {
@@ -14,6 +15,7 @@ declare module "next-auth" {
       role: Role;
       prodiId: string | null;
       kkId: string | null;
+      dosenId: string | null;
     } & DefaultSession["user"];
   }
 }
@@ -23,6 +25,7 @@ declare module "next-auth/jwt" {
     role?: Role;
     prodiId?: string | null;
     kkId?: string | null;
+    dosenId?: string | null;
   }
 }
 
@@ -31,5 +34,6 @@ declare module "@auth/core/jwt" {
     role?: Role;
     prodiId?: string | null;
     kkId?: string | null;
+    dosenId?: string | null;
   }
 }

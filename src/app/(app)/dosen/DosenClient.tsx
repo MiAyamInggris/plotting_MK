@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Search, Plus, GraduationCap } from "lucide-react";
+import { Search, Plus, GraduationCap, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   Sheet,
   SheetContent,
@@ -68,6 +69,11 @@ const JFA_OPTIONS = [
 const TINGKAT_OPTIONS: TingkatPendidikan[] = ["S2", "S3", "ON_GOING_S3"];
 const ALL = "__all__";
 const NONE = "__none__";
+
+type ImportReport = {
+  counts: Record<string, number>;
+  warnings: { level: "warning" | "error"; message: string; context?: string }[];
+};
 
 type FormState = {
   kode: string;
@@ -314,6 +320,9 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
   const [editError, setEditError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [generatingAccounts, setGeneratingAccounts] = useState(false);
+  const [accountsReport, setAccountsReport] = useState<ImportReport | null>(null);
+
   const query = useMemo(() => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
@@ -445,6 +454,23 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
     }
   }
 
+  async function onGenerateAccounts() {
+    setGeneratingAccounts(true);
+    setAccountsReport(null);
+    try {
+      const res = await fetch("/api/dosen/generate-accounts", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to generate accounts");
+      setAccountsReport(data.report);
+      const created = data.report.counts.accountsCreated ?? 0;
+      toast.success(created > 0 ? `${created} dosen account(s) created` : "No new accounts to create");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate accounts");
+    } finally {
+      setGeneratingAccounts(false);
+    }
+  }
+
   const columnCount = canEdit ? 10 : 9;
 
   return (
@@ -452,37 +478,52 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Dosen</CardTitle>
         {canEdit && (
-          <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-            <SheetTrigger asChild>
-              <Button>
-                <Plus className="size-4" />
-                Add Dosen
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-lg">
-              <SheetHeader className="border-b border-border">
-                <SheetTitle>Create Dosen</SheetTitle>
-              </SheetHeader>
-              <form onSubmit={onCreate} className="flex flex-1 flex-col">
-                <div className="flex-1 space-y-4 p-4">
-                  <DosenFields
-                    value={createForm}
-                    onChange={setCreateForm}
-                    programStudi={programStudi}
-                    kelompokKeahlian={kelompokKeahlian}
-                    coeList={coeList}
-                    idPrefix="create"
-                  />
-                  {createError && <p className="text-sm text-destructive">{createError}</p>}
-                </div>
-                <SheetFooter className="border-t border-border">
-                  <Button type="submit" disabled={creating}>
-                    {creating ? "Creating…" : "Create"}
-                  </Button>
-                </SheetFooter>
-              </form>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ConfirmDialog
+              trigger={
+                <Button variant="outline" disabled={generatingAccounts}>
+                  <UserPlus className="size-4" />
+                  {generatingAccounts ? "Generating…" : "Generate Dosen Accounts"}
+                </Button>
+              }
+              title="Generate login accounts for all dosen?"
+              description="Creates a DOSEN-role login for every dosen with an email and NIP that doesn't already have an account. Default passwords are derived from NIP and must be changed on first login. Dosen already provisioned are skipped."
+              confirmLabel="Generate"
+              variant="default"
+              onConfirm={onGenerateAccounts}
+            />
+            <Sheet open={createOpen} onOpenChange={setCreateOpen}>
+              <SheetTrigger asChild>
+                <Button>
+                  <Plus className="size-4" />
+                  Add Dosen
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-lg">
+                <SheetHeader className="border-b border-border">
+                  <SheetTitle>Create Dosen</SheetTitle>
+                </SheetHeader>
+                <form onSubmit={onCreate} className="flex flex-1 flex-col">
+                  <div className="flex-1 space-y-4 p-4">
+                    <DosenFields
+                      value={createForm}
+                      onChange={setCreateForm}
+                      programStudi={programStudi}
+                      kelompokKeahlian={kelompokKeahlian}
+                      coeList={coeList}
+                      idPrefix="create"
+                    />
+                    {createError && <p className="text-sm text-destructive">{createError}</p>}
+                  </div>
+                  <SheetFooter className="border-t border-border">
+                    <Button type="submit" disabled={creating}>
+                      {creating ? "Creating…" : "Create"}
+                    </Button>
+                  </SheetFooter>
+                </form>
+              </SheetContent>
+            </Sheet>
+          </div>
         )}
       </CardHeader>
 
@@ -584,6 +625,33 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
           <Alert variant="destructive">
             <AlertDescription>{loadError}</AlertDescription>
           </Alert>
+        )}
+
+        {accountsReport && (
+          <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-4 text-sm">
+            <p className="font-medium text-foreground">
+              Accounts created: {accountsReport.counts.accountsCreated ?? 0} · Skipped (no email):{" "}
+              {accountsReport.counts.skippedNoEmail ?? 0} · Skipped (no NIP):{" "}
+              {accountsReport.counts.skippedNoNip ?? 0}
+            </p>
+            {accountsReport.warnings.length > 0 && (
+              <ul className="max-h-48 space-y-1 overflow-y-auto">
+                {accountsReport.warnings.map((w, i) => (
+                  <li
+                    key={i}
+                    className={
+                      w.level === "error"
+                        ? "rounded-md bg-destructive/10 px-2.5 py-1.5 text-destructive"
+                        : "rounded-md bg-amber-100 px-2.5 py-1.5 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400"
+                    }
+                  >
+                    {w.context && <span className="font-mono text-xs opacity-70">[{w.context}] </span>}
+                    {w.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
 
         <Table>

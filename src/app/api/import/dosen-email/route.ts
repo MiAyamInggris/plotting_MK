@@ -1,0 +1,35 @@
+import { NextResponse } from "next/server";
+import { getSessionUser } from "@/lib/session";
+import { canManageMasterData } from "@/lib/authz";
+import { validateImportFile } from "@/lib/import/fileValidation";
+import { importDosenEmail } from "@/lib/import/dosenEmail";
+
+export async function POST(request: Request) {
+  const user = await getSessionUser();
+  if (!canManageMasterData(user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const formData = await request.formData();
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "No file provided" }, { status: 400 });
+  }
+
+  const fileError = validateImportFile(file, [".csv", ".tsv"]);
+  if (fileError) {
+    return NextResponse.json({ error: fileError }, { status: 400 });
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  try {
+    const report = await importDosenEmail(buffer);
+    return NextResponse.json({ report });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Import failed" },
+      { status: 400 },
+    );
+  }
+}

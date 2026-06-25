@@ -10,9 +10,22 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const kode = searchParams.get("kode")?.toUpperCase();
-  if (!kode) {
-    return NextResponse.json({ error: "kode is required" }, { status: 400 });
+
+  // A dosen can only ever look up their own load, regardless of any kode
+  // query param they pass — every other role searches freely by kode.
+  const isSelfLookup = user.role === "DOSEN";
+  let dosenWhere: { id: string } | { kode: string };
+  if (isSelfLookup) {
+    if (!user.dosenId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    dosenWhere = { id: user.dosenId };
+  } else {
+    const kode = searchParams.get("kode")?.toUpperCase();
+    if (!kode) {
+      return NextResponse.json({ error: "kode is required" }, { status: 400 });
+    }
+    dosenWhere = { kode };
   }
 
   const semesterResult = await resolveSemester(user, searchParams.get("semesterPeriodeId"));
@@ -22,7 +35,7 @@ export async function GET(request: Request) {
   const activePeriode = semesterResult.semester;
 
   const dosen = await prisma.dosen.findUnique({
-    where: { kode },
+    where: dosenWhere,
     select: {
       id: true,
       kode: true,
@@ -34,7 +47,10 @@ export async function GET(request: Request) {
     },
   });
   if (!dosen) {
-    return NextResponse.json({ error: `Dosen with kode "${kode}" not found` }, { status: 404 });
+    return NextResponse.json(
+      { error: isSelfLookup ? "Dosen profile not found" : `Dosen not found` },
+      { status: 404 },
+    );
   }
 
   const kelasList = await prisma.kelas.findMany({

@@ -5,7 +5,7 @@ import MataKuliahClient from "./MataKuliahClient";
 
 export default async function MataKuliahPage() {
   const user = await getSessionUser();
-  if (!user || user.role === "KETUA_KK") redirect("/");
+  if (!user || (user.role !== "ADMIN" && user.role !== "KAPRODI")) redirect("/");
 
   const programStudi = await prisma.programStudi.findMany({
     orderBy: { kode: "asc" },

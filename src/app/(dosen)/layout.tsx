@@ -2,13 +2,13 @@ import { redirect } from "next/navigation";
 import { requireSessionUser, getAppShellProps } from "@/lib/appShellData";
 import AppShell from "@/components/AppShell";
 
-export default async function AppGroupLayout({
+export default async function DosenGroupLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const user = await requireSessionUser();
-  if (user.role === "DOSEN") redirect("/my-beban");
+  if (user.role !== "DOSEN") redirect("/");
 
   const { scopeLabel, semesters } = await getAppShellProps(user);
 

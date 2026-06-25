@@ -12,6 +12,7 @@ enum Role {
   ADMIN
   KAPRODI
   KETUA_KK
+  DOSEN
 }
 
 enum SemesterTipe {
@@ -80,6 +81,7 @@ model Dosen {
   kode              String             @unique
   nama              String
   namaTanpaGelar    String
+  email             String?            @unique
   nipYpt            String?
   nidn              String?
   jfa               String?
@@ -95,6 +97,7 @@ model Dosen {
   aktif             Boolean            @default(true)
 
   kelas Kelas[]
+  user  User?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -207,18 +210,26 @@ model Kelas {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         Role
-  prodiId      String?
-  prodi        ProgramStudi?     @relation(fields: [prodiId], references: [id])
-  kkId         String?
-  kk           KelompokKeahlian? @relation(fields: [kkId], references: [id])
-  aktif        Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  passwordHash       String
+  name               String
+  role               Role
+  prodiId            String?
+  prodi              ProgramStudi?     @relation(fields: [prodiId], references: [id])
+  kkId               String?
+  kk                 KelompokKeahlian? @relation(fields: [kkId], references: [id])
+  // 1:1 with Dosen for DOSEN-role accounts. Null for non-dosen accounts
+  // (the seeded bootstrap admin, or an Admin/Kaprodi/Ketua KK created
+  // directly without going through dosen-account provisioning).
+  dosenId            String?  @unique
+  dosen              Dosen?   @relation(fields: [dosenId], references: [id])
+  // True for accounts provisioned with a predictable default password
+  // (derived from NIP); cleared once the user sets their own password.
+  mustChangePassword Boolean  @default(false)
+  aktif              Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([prodiId])
   @@index([kkId])

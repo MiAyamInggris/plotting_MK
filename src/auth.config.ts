@@ -21,6 +21,7 @@ export const authConfig: NextAuthConfig = {
         token.role = user.role;
         token.prodiId = user.prodiId;
         token.kkId = user.kkId;
+        token.dosenId = user.dosenId;
       }
       return token;
     },
@@ -30,6 +31,7 @@ export const authConfig: NextAuthConfig = {
         session.user.role = token.role as typeof session.user.role;
         session.user.prodiId = token.prodiId ?? null;
         session.user.kkId = token.kkId ?? null;
+        session.user.dosenId = token.dosenId ?? null;
       }
       return session;
     },
