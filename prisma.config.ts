@@ -11,4 +11,10 @@ export default defineConfig({
     seed: "npx tsx prisma/seed.ts",
   },
   engine: "classic",
+  datasource: {
+    // Plain process.env access (not the strict `env()` helper) so this
+    // never throws when DATABASE_URL is absent, e.g. during `prisma
+    // generate` in postinstall before Vercel injects build env vars.
+    url: process.env.DATABASE_URL!,
+  },
 });
