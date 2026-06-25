@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canEditCourses } from "@/lib/authz";
+import { resolveWritableSemester } from "@/lib/semester";
 import { createCourseOfferingSchema } from "@/lib/validation/mataKuliah";
 
 export async function POST(request: Request) {
@@ -23,15 +24,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const activePeriode = await prisma.semesterPeriode.findFirst({
-    where: { aktif: true },
-  });
-  if (!activePeriode) {
-    return NextResponse.json(
-      { error: "No active SemesterPeriode is configured" },
-      { status: 400 },
-    );
+  const semesterResult = await resolveWritableSemester(user, parsed.data.semesterPeriodeId);
+  if (!semesterResult.ok) {
+    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
   }
+  const { semester } = semesterResult;
 
   try {
     const created = await prisma.courseOffering.create({
@@ -41,7 +38,7 @@ export async function POST(request: Request) {
         tahunAngkatan: parsed.data.tahunAngkatan,
         kelasPrefix: parsed.data.kelasPrefix,
         prodiId: mataKuliah.prodiId,
-        semesterPeriodeId: activePeriode.id,
+        semesterPeriodeId: semester.id,
       },
       include: { kelas: true },
     });

@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import type { SemesterPeriode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { PRODI_SHEET_MAPPING } from "@/lib/import/prodiMapping";
 
@@ -12,12 +13,7 @@ const SHEET_NAME_BY_PRODI_KODE = new Map(
   Object.entries(PRODI_SHEET_MAPPING).map(([sheetName, kode]) => [kode, sheetName]),
 );
 
-export async function exportPlottingWorkbook(): Promise<Buffer> {
-  const activePeriode = await prisma.semesterPeriode.findFirst({ where: { aktif: true } });
-  if (!activePeriode) {
-    throw new Error("No active SemesterPeriode is configured");
-  }
-
+export async function exportPlottingWorkbook(activePeriode: SemesterPeriode): Promise<Buffer> {
   const programStudiList = await prisma.programStudi.findMany({ orderBy: { kode: "asc" } });
   const wb = XLSX.utils.book_new();
 

@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TableSkeleton } from "@/components/TableSkeleton";
+import { useSemester } from "@/components/SemesterContext";
 import { cn } from "@/lib/utils";
 
 type Row = {
@@ -41,6 +42,7 @@ function SummaryCard({ label, value, caption }: { label: string; value: number; 
 }
 
 export default function ProdiSummaryTab({ canEditTargets }: { canEditTargets: boolean }) {
+  const { semesterId } = useSemester();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -51,10 +53,11 @@ export default function ProdiSummaryTab({ canEditTargets }: { canEditTargets: bo
   const [saving, setSaving] = useState(false);
 
   async function load() {
+    if (!semesterId) return;
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch("/api/recap/prodi-summary");
+      const res = await fetch(`/api/recap/prodi-summary?semesterPeriodeId=${semesterId}`);
       if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
       setRows(data.prodiSummary);
@@ -67,7 +70,8 @@ export default function ProdiSummaryTab({ canEditTargets }: { canEditTargets: bo
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [semesterId]);
 
   const totals = useMemo(
     () =>
@@ -98,7 +102,11 @@ export default function ProdiSummaryTab({ canEditTargets }: { canEditTargets: bo
       const res = await fetch("/api/prodi-target", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prodiId: editingId, kebutuhanSks: Number(editValue) }),
+        body: JSON.stringify({
+          prodiId: editingId,
+          kebutuhanSks: Number(editValue),
+          semesterPeriodeId: semesterId,
+        }),
       });
       if (!res.ok) {
         const data = await res.json();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
+import { resolveSemester } from "@/lib/semester";
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
@@ -14,10 +15,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "kode is required" }, { status: 400 });
   }
 
-  const activePeriode = await prisma.semesterPeriode.findFirst({ where: { aktif: true } });
-  if (!activePeriode) {
-    return NextResponse.json({ error: "No active SemesterPeriode is configured" }, { status: 400 });
+  const semesterResult = await resolveSemester(user, searchParams.get("semesterPeriodeId"));
+  if (!semesterResult.ok) {
+    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
   }
+  const activePeriode = semesterResult.semester;
 
   const dosen = await prisma.dosen.findUnique({
     where: { kode },
@@ -36,7 +38,7 @@ export async function GET(request: Request) {
   }
 
   const kelasList = await prisma.kelas.findMany({
-    where: { dosenId: dosen.id, courseOffering: { semesterPeriodeId: activePeriode.id } },
+    where: { dosenId: dosen.id, semesterPeriodeId: activePeriode.id },
     include: {
       courseOffering: {
         select: {

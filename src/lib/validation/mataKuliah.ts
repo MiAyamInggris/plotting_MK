@@ -20,6 +20,7 @@ export const createCourseOfferingSchema = z.object({
   semesterKe: z.coerce.number().int().positive(),
   tahunAngkatan: z.coerce.number().int().positive(),
   kelasPrefix: z.string().min(1),
+  semesterPeriodeId: z.string().min(1).nullable().optional(),
 });
 
 export const updateCourseOfferingSchema = z.object({

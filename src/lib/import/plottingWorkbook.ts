@@ -353,8 +353,14 @@ async function importPlottingSheets(
       prisma.programStudi.findMany(),
       prisma.dosen.findMany({ select: { id: true, kode: true } }),
       prisma.mataKuliah.findMany({ select: { kodeMK: true, prodiId: true } }),
-      prisma.courseOffering.findMany({ select: { mataKuliahId: true, kelasPrefix: true } }),
-      prisma.kelas.findMany({ select: { courseOfferingId: true, sectionSuffix: true } }),
+      prisma.courseOffering.findMany({
+        where: { semesterPeriodeId: activePeriode.id },
+        select: { mataKuliahId: true, kelasPrefix: true },
+      }),
+      prisma.kelas.findMany({
+        where: { semesterPeriodeId: activePeriode.id },
+        select: { courseOfferingId: true, sectionSuffix: true },
+      }),
     ]);
   const prodiByKode = new Map(programStudiList.map((p) => [p.kode, p]));
   const dosenByKode = new Map(dosenList.map((d) => [d.kode, d.id]));
@@ -362,7 +368,9 @@ async function importPlottingSheets(
 
   // Snapshots of existing keys, used to report created-vs-updated counts.
   // Mutated as we go so a kodeMK repeated across two blocks in this same run
-  // is only counted as "created" once.
+  // is only counted as "created" once. Offerings/Kelas are scoped to the
+  // active period — the same mataKuliahId+kelasPrefix legitimately exists in
+  // other semesters without colliding here.
   const mkKeySet = new Set(existingMataKuliah.map((m) => `${m.prodiId}|${m.kodeMK}`));
   const offeringKeySet = new Set(
     existingOfferings.map((o) => `${o.mataKuliahId}|${o.kelasPrefix}`),
@@ -431,7 +439,8 @@ async function importPlottingSheets(
 
           const courseOffering = await tx.courseOffering.upsert({
             where: {
-              mataKuliahId_kelasPrefix: {
+              semesterPeriodeId_mataKuliahId_kelasPrefix: {
+                semesterPeriodeId: activePeriode.id,
                 mataKuliahId: mataKuliah.id,
                 kelasPrefix: block.kelasPrefix,
               },
@@ -477,6 +486,7 @@ async function importPlottingSheets(
               update: { kodeKelas: k.kodeKelas, sks: k.sks, dosenId },
               create: {
                 courseOfferingId: courseOffering.id,
+                semesterPeriodeId: activePeriode.id,
                 kodeKelas: k.kodeKelas,
                 sectionSuffix: k.sectionSuffix,
                 sks: k.sks,

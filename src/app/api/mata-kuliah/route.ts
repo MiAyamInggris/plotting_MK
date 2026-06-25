@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canEditCourses } from "@/lib/authz";
+import { resolveSemester } from "@/lib/semester";
 import { createMataKuliahSchema } from "@/lib/validation/mataKuliah";
 
 export async function GET(request: Request) {
@@ -16,19 +17,29 @@ export async function GET(request: Request) {
   // Kaprodi is always scoped to their own prodi, regardless of the query param.
   const prodiId = user.role === "KAPRODI" ? user.prodiId : queryProdiId;
 
+  const semesterResult = await resolveSemester(user, searchParams.get("semesterPeriodeId"));
+  if (!semesterResult.ok) {
+    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
+  }
+
   const mataKuliah = await prisma.mataKuliah.findMany({
     where: prodiId ? { prodiId } : undefined,
     orderBy: [{ prodiId: "asc" }, { kodeMK: "asc" }],
     include: {
       prodi: { select: { kode: true, nama: true } },
       courseOfferings: {
+        where: { semesterPeriodeId: semesterResult.semester.id },
         orderBy: [{ tahunAngkatan: "desc" }, { semesterKe: "asc" }],
         include: { kelas: true },
       },
     },
   });
 
-  return NextResponse.json({ mataKuliah });
+  return NextResponse.json({
+    mataKuliah,
+    activePeriode: semesterResult.semester,
+    canWrite: semesterResult.canWrite,
+  });
 }
 
 export async function POST(request: Request) {

@@ -11,6 +11,7 @@ import {
   Award,
   Upload,
   UserCog,
+  CalendarClock,
 } from "lucide-react";
 
 export type NavGroup = "Overview" | "Master Data" | "Administration";
@@ -79,6 +80,13 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["ADMIN"],
     icon: Award,
     group: "Master Data",
+  },
+  {
+    href: "/semesters",
+    label: "Semesters",
+    roles: ["ADMIN"],
+    icon: CalendarClock,
+    group: "Administration",
   },
   {
     href: "/import",

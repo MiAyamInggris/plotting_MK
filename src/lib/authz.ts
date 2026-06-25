@@ -16,6 +16,10 @@ export function canManageMasterData(user: AuthUser | null | undefined): boolean 
   return user?.role === "ADMIN";
 }
 
+export function canManageSemesters(user: AuthUser | null | undefined): boolean {
+  return user?.role === "ADMIN";
+}
+
 /** Kaprodi may edit Mata Kuliah/offerings only for their own bound Prodi. Admin can edit any. */
 export function canEditCourses(
   user: AuthUser | null | undefined,

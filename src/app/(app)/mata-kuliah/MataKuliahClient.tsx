@@ -27,6 +27,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/EmptyState";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useSemester } from "@/components/SemesterContext";
 
 type Role = "ADMIN" | "KAPRODI" | "KETUA_KK";
 
@@ -64,9 +65,11 @@ const EMPTY_CREATE: CreateForm = { kodeMK: "", nama: "", sks: "", ket: "" };
 
 function OfferingRows({
   offerings,
+  canManage,
   onDelete,
 }: {
   offerings: CourseOffering[];
+  canManage: boolean;
   onDelete: (id: string) => void;
 }) {
   if (offerings.length === 0) {
@@ -90,16 +93,18 @@ function OfferingRows({
             {co.kelas.reduce((sum, k) => sum + (k.dosenId ? k.sks : 0), 0)}
           </TableCell>
           <TableCell className="text-right">
-            <ConfirmDialog
-              trigger={
-                <Button variant="outline" size="sm" className="text-destructive">
-                  Remove
-                </Button>
-              }
-              title="Remove this offering?"
-              description="This cannot be undone."
-              onConfirm={() => onDelete(co.id)}
-            />
+            {canManage && (
+              <ConfirmDialog
+                trigger={
+                  <Button variant="outline" size="sm" className="text-destructive">
+                    Remove
+                  </Button>
+                }
+                title="Remove this offering?"
+                description="This cannot be undone."
+                onConfirm={() => onDelete(co.id)}
+              />
+            )}
           </TableCell>
         </TableRow>
       ))}
@@ -117,11 +122,13 @@ export default function MataKuliahClient({
   programStudi: ProgramStudi[];
 }) {
   const isKaprodi = role === "KAPRODI";
+  const { semesterId } = useSemester();
   const [selectedProdiId, setSelectedProdiId] = useState(
     isKaprodi ? userProdiId ?? "" : programStudi[0]?.id ?? "",
   );
 
   const [items, setItems] = useState<MataKuliah[]>([]);
+  const [semesterWritable, setSemesterWritable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -136,7 +143,7 @@ export default function MataKuliahClient({
   >({});
 
   async function load() {
-    if (!selectedProdiId) {
+    if (!selectedProdiId || !semesterId) {
       setItems([]);
       setLoading(false);
       return;
@@ -144,10 +151,13 @@ export default function MataKuliahClient({
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`/api/mata-kuliah?prodiId=${selectedProdiId}`);
+      const res = await fetch(
+        `/api/mata-kuliah?prodiId=${selectedProdiId}&semesterPeriodeId=${semesterId}`,
+      );
       if (!res.ok) throw new Error("Failed to load mata kuliah");
       const data = await res.json();
       setItems(data.mataKuliah);
+      setSemesterWritable(data.canWrite);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Failed to load mata kuliah");
     } finally {
@@ -158,7 +168,7 @@ export default function MataKuliahClient({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProdiId]);
+  }, [selectedProdiId, semesterId]);
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -221,6 +231,7 @@ export default function MataKuliahClient({
           semesterKe: Number(form.semesterKe),
           tahunAngkatan: Number(form.tahunAngkatan),
           kelasPrefix: form.kelasPrefix,
+          semesterPeriodeId: semesterId,
         }),
       });
       if (!res.ok) {
@@ -418,64 +429,77 @@ export default function MataKuliahClient({
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              <OfferingRows offerings={mk.courseOfferings} onDelete={deleteOffering} />
+                              <OfferingRows
+                                offerings={mk.courseOfferings}
+                                canManage={semesterWritable}
+                                onDelete={deleteOffering}
+                              />
                             </TableBody>
                           </Table>
 
-                          <form
-                            onSubmit={(e) => onCreateOffering(mk.id, e)}
-                            className="flex flex-wrap items-end gap-3"
-                          >
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Semester ke</Label>
-                              <Input
-                                required
-                                type="number"
-                                className="w-24"
-                                value={form.semesterKe}
-                                onChange={(e) =>
-                                  setOfferingForms((prev) => ({
-                                    ...prev,
-                                    [mk.id]: { ...form, semesterKe: e.target.value },
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Tahun angkatan</Label>
-                              <Input
-                                required
-                                type="number"
-                                className="w-28"
-                                value={form.tahunAngkatan}
-                                onChange={(e) =>
-                                  setOfferingForms((prev) => ({
-                                    ...prev,
-                                    [mk.id]: { ...form, tahunAngkatan: e.target.value },
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Kelas prefix</Label>
-                              <Input
-                                required
-                                placeholder="S1IF-10-"
-                                className="w-40"
-                                value={form.kelasPrefix}
-                                onChange={(e) =>
-                                  setOfferingForms((prev) => ({
-                                    ...prev,
-                                    [mk.id]: { ...form, kelasPrefix: e.target.value },
-                                  }))
-                                }
-                              />
-                            </div>
-                            <Button type="submit" variant="outline" size="sm">
-                              <Plus className="size-4" />
-                              Add offering
-                            </Button>
-                          </form>
+                          {!semesterWritable && (
+                            <p className="text-sm text-muted-foreground">
+                              This semester is read-only — switch to the active semester to add or
+                              remove offerings.
+                            </p>
+                          )}
+
+                          {semesterWritable && (
+                            <form
+                              onSubmit={(e) => onCreateOffering(mk.id, e)}
+                              className="flex flex-wrap items-end gap-3"
+                            >
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Semester ke</Label>
+                                <Input
+                                  required
+                                  type="number"
+                                  className="w-24"
+                                  value={form.semesterKe}
+                                  onChange={(e) =>
+                                    setOfferingForms((prev) => ({
+                                      ...prev,
+                                      [mk.id]: { ...form, semesterKe: e.target.value },
+                                    }))
+                                  }
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Tahun angkatan</Label>
+                                <Input
+                                  required
+                                  type="number"
+                                  className="w-28"
+                                  value={form.tahunAngkatan}
+                                  onChange={(e) =>
+                                    setOfferingForms((prev) => ({
+                                      ...prev,
+                                      [mk.id]: { ...form, tahunAngkatan: e.target.value },
+                                    }))
+                                  }
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Kelas prefix</Label>
+                                <Input
+                                  required
+                                  placeholder="S1IF-10-"
+                                  className="w-40"
+                                  value={form.kelasPrefix}
+                                  onChange={(e) =>
+                                    setOfferingForms((prev) => ({
+                                      ...prev,
+                                      [mk.id]: { ...form, kelasPrefix: e.target.value },
+                                    }))
+                                  }
+                                />
+                              </div>
+                              <Button type="submit" variant="outline" size="sm">
+                                <Plus className="size-4" />
+                                Add offering
+                              </Button>
+                            </form>
+                          )}
                         </TableCell>
                       </TableRow>
                     )}

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canManageSections } from "@/lib/authz";
+import { resolveWritableSemester } from "@/lib/semester";
 import { createKelasSchema } from "@/lib/validation/plotting";
 
 export async function POST(request: Request) {
@@ -25,12 +26,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Course offering not found" }, { status: 404 });
   }
 
+  const semesterResult = await resolveWritableSemester(user, courseOffering.semesterPeriodeId);
+  if (!semesterResult.ok) {
+    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
+  }
+
   const kodeKelas = `${courseOffering.kelasPrefix}${parsed.data.sectionSuffix}`;
 
   try {
     const created = await prisma.kelas.create({
       data: {
         courseOfferingId: courseOffering.id,
+        semesterPeriodeId: courseOffering.semesterPeriodeId,
         kodeKelas,
         sectionSuffix: parsed.data.sectionSuffix,
         sks: courseOffering.mataKuliah.sks,

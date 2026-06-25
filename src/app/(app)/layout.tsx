@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { listSemestersFor } from "@/lib/semester";
 import AppShell from "@/components/AppShell";
 
 export default async function AppGroupLayout({
@@ -30,8 +31,15 @@ export default async function AppGroupLayout({
     scopeLabel = "All Program Studi";
   }
 
+  const semesters = await listSemestersFor(user);
+
   return (
-    <AppShell name={user.name ?? user.email ?? "User"} role={user.role} scopeLabel={scopeLabel}>
+    <AppShell
+      name={user.name ?? user.email ?? "User"}
+      role={user.role}
+      scopeLabel={scopeLabel}
+      semesters={semesters}
+    >
       {children}
     </AppShell>
   );

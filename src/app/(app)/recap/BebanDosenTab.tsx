@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/EmptyState";
 import { TableSkeleton } from "@/components/TableSkeleton";
+import { useSemester } from "@/components/SemesterContext";
 
 type ProgramStudi = { id: string; kode: string; nama: string };
 type KelompokKeahlian = { id: string; nama: string };
@@ -42,6 +43,7 @@ export default function BebanDosenTab({
   programStudi: ProgramStudi[];
   kelompokKeahlian: KelompokKeahlian[];
 }) {
+  const { semesterId } = useSemester();
   const [kkId, setKkId] = useState(ALL);
   const [homebaseProdiId, setHomebaseProdiId] = useState(ALL);
   const [rows, setRows] = useState<Row[]>([]);
@@ -49,10 +51,11 @@ export default function BebanDosenTab({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   async function load() {
+    if (!semesterId) return;
     setLoading(true);
     setLoadError(null);
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ semesterPeriodeId: semesterId });
       if (kkId !== ALL) params.set("kkId", kkId);
       if (homebaseProdiId !== ALL) params.set("homebaseProdiId", homebaseProdiId);
       const res = await fetch(`/api/recap/beban-dosen?${params.toString()}`);
@@ -69,7 +72,7 @@ export default function BebanDosenTab({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kkId, homebaseProdiId]);
+  }, [kkId, homebaseProdiId, semesterId]);
 
   return (
     <Card>

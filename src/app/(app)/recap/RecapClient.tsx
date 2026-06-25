@@ -3,6 +3,7 @@
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSemester } from "@/components/SemesterContext";
 import BebanDosenTab from "./BebanDosenTab";
 import ProdiSummaryTab from "./ProdiSummaryTab";
 import PivotTab from "./PivotTab";
@@ -19,6 +20,9 @@ export default function RecapClient({
   kelompokKeahlian: KelompokKeahlian[];
   canEditTargets: boolean;
 }) {
+  const { semesterId, activeSemesterId } = useSemester();
+  const canEditTargetsHere = canEditTargets && semesterId === activeSemesterId;
+
   return (
     <Tabs defaultValue="beban-dosen" className="gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -29,7 +33,7 @@ export default function RecapClient({
         </TabsList>
 
         <Button variant="outline" asChild>
-          <a href="/api/export/plotting">
+          <a href={`/api/export/plotting?semesterPeriodeId=${semesterId}`}>
             <Download className="size-4" />
             Export current plotting (.xlsx)
           </a>
@@ -40,7 +44,7 @@ export default function RecapClient({
         <BebanDosenTab programStudi={programStudi} kelompokKeahlian={kelompokKeahlian} />
       </TabsContent>
       <TabsContent value="prodi-summary">
-        <ProdiSummaryTab canEditTargets={canEditTargets} />
+        <ProdiSummaryTab canEditTargets={canEditTargetsHere} />
       </TabsContent>
       <TabsContent value="pivot">
         <PivotTab />

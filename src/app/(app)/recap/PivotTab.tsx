@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useSemester } from "@/components/SemesterContext";
 
 type Pivot = {
   dosen: {
@@ -38,6 +39,7 @@ type Pivot = {
 };
 
 export default function PivotTab() {
+  const { semesterId } = useSemester();
   const [kode, setKode] = useState("");
   const [pivot, setPivot] = useState<Pivot | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,7 +52,9 @@ export default function PivotTab() {
     setError(null);
     setPivot(null);
     try {
-      const res = await fetch(`/api/recap/pivot?kode=${encodeURIComponent(kode.trim())}`);
+      const res = await fetch(
+        `/api/recap/pivot?kode=${encodeURIComponent(kode.trim())}&semesterPeriodeId=${semesterId}`,
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Not found");
       setPivot(data);

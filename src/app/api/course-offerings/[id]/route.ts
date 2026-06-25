@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canEditCourses } from "@/lib/authz";
+import { resolveWritableSemester } from "@/lib/semester";
 import { updateCourseOfferingSchema } from "@/lib/validation/mataKuliah";
 
 export async function PATCH(
@@ -17,6 +18,11 @@ export async function PATCH(
   }
   if (!canEditCourses(user, existing.prodiId)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const semesterResult = await resolveWritableSemester(user, existing.semesterPeriodeId);
+  if (!semesterResult.ok) {
+    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
   }
 
   const body = await request.json();
@@ -47,6 +53,11 @@ export async function DELETE(
   }
   if (!canEditCourses(user, existing.prodiId)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const semesterResult = await resolveWritableSemester(user, existing.semesterPeriodeId);
+  if (!semesterResult.ok) {
+    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
   }
 
   try {

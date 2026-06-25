@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useSemester } from "@/components/SemesterContext";
 import { cn } from "@/lib/utils";
 import DosenPicker, { type DosenOption } from "./DosenPicker";
 
@@ -133,10 +134,12 @@ export default function PlottingClient({
   canManageSections: boolean;
   dosenOptions: DosenOption[];
 }) {
+  const { semesterId } = useSemester();
   const [selectedProdiId, setSelectedProdiId] = useState(
     defaultProdiId ?? programStudi[0]?.id ?? "",
   );
   const [mataKuliah, setMataKuliah] = useState<MataKuliahRow[]>([]);
+  const [semesterWritable, setSemesterWritable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [savingKelasId, setSavingKelasId] = useState<string | null>(null);
@@ -144,14 +147,17 @@ export default function PlottingClient({
   const [sectionForms, setSectionForms] = useState<Record<string, string>>({});
 
   async function load() {
-    if (!selectedProdiId) return;
+    if (!selectedProdiId || !semesterId) return;
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`/api/plotting?prodiId=${selectedProdiId}`);
+      const res = await fetch(
+        `/api/plotting?prodiId=${selectedProdiId}&semesterPeriodeId=${semesterId}`,
+      );
       if (!res.ok) throw new Error("Failed to load plotting data");
       const data = await res.json();
       setMataKuliah(data.mataKuliah);
+      setSemesterWritable(data.canWrite);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Failed to load plotting data");
     } finally {
@@ -162,7 +168,10 @@ export default function PlottingClient({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProdiId]);
+  }, [selectedProdiId, semesterId]);
+
+  const effectiveCanEdit = canEdit && semesterWritable;
+  const effectiveCanManageSections = canManageSections && semesterWritable;
 
   const blocks = useMemo(() => {
     const map = new Map<
@@ -291,6 +300,13 @@ export default function PlottingClient({
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
       )}
+      {!loading && !semesterWritable && (canEdit || canManageSections) && (
+        <Alert>
+          <AlertDescription>
+            This semester is read-only. Switch to the active semester to make changes.
+          </AlertDescription>
+        </Alert>
+      )}
       {allWarnings.length > 0 && (
         <Alert className="border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
           <AlertDescription className="space-y-1 text-amber-800 dark:text-amber-400">
@@ -338,8 +354,8 @@ export default function PlottingClient({
                           <SectionChip
                             key={k.id}
                             kelas={k}
-                            canEdit={canEdit}
-                            canManageSections={canManageSections}
+                            canEdit={effectiveCanEdit}
+                            canManageSections={effectiveCanManageSections}
                             dosenOptions={dosenOptions}
                             onAssign={(dosenId) => assignDosen(k.id, dosenId)}
                             onClear={() => clearDosen(k.id)}
@@ -348,7 +364,7 @@ export default function PlottingClient({
                           />
                         ))}
                       </div>
-                      {canManageSections && (
+                      {effectiveCanManageSections && (
                         <form
                           onSubmit={(e) => addSection(co.id, e)}
                           className={cn("mt-2 flex items-center gap-2")}

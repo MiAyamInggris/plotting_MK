@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canManageSections, canPlot } from "@/lib/authz";
+import { resolveWritableSemester } from "@/lib/semester";
 import { assignDosenSchema } from "@/lib/validation/plotting";
 import { checkCrossProdi, checkDosenActive, checkSksCap, type RuleResult } from "@/lib/validation/rules";
 
@@ -18,6 +19,11 @@ export async function PATCH(
   });
   if (!existing) {
     return NextResponse.json({ error: "Kelas not found" }, { status: 404 });
+  }
+
+  const semesterResult = await resolveWritableSemester(user, existing.semesterPeriodeId);
+  if (!semesterResult.ok) {
+    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
   }
 
   const body = await request.json();
@@ -51,7 +57,7 @@ export async function PATCH(
       where: {
         dosenId: dosen.id,
         id: { not: existing.id },
-        courseOffering: { semesterPeriodeId: existing.courseOffering.semesterPeriodeId },
+        semesterPeriodeId: existing.semesterPeriodeId,
       },
       _sum: { sks: true },
     });
@@ -86,6 +92,11 @@ export async function DELETE(
   const existing = await prisma.kelas.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ error: "Kelas not found" }, { status: 404 });
+  }
+
+  const semesterResult = await resolveWritableSemester(user, existing.semesterPeriodeId);
+  if (!semesterResult.ok) {
+    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
   }
 
   await prisma.kelas.delete({ where: { id } });

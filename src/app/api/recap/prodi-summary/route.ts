@@ -1,23 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
+import { resolveSemester } from "@/lib/semester";
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const activePeriode = await prisma.semesterPeriode.findFirst({ where: { aktif: true } });
-  if (!activePeriode) {
-    return NextResponse.json({ error: "No active SemesterPeriode is configured" }, { status: 400 });
+  const { searchParams } = new URL(request.url);
+  const semesterResult = await resolveSemester(user, searchParams.get("semesterPeriodeId"));
+  if (!semesterResult.ok) {
+    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
   }
+  const activePeriode = semesterResult.semester;
 
   const [programStudiList, targets, kelasList] = await Promise.all([
     prisma.programStudi.findMany({ orderBy: { kode: "asc" } }),
     prisma.prodiTarget.findMany({ where: { semesterPeriodeId: activePeriode.id } }),
     prisma.kelas.findMany({
-      where: { dosenId: { not: null }, courseOffering: { semesterPeriodeId: activePeriode.id } },
+      where: { dosenId: { not: null }, semesterPeriodeId: activePeriode.id },
       select: { sks: true, courseOffering: { select: { prodiId: true } } },
     }),
   ]);

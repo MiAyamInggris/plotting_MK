@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
+import { resolveSemester } from "@/lib/semester";
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
@@ -12,10 +13,11 @@ export async function GET(request: Request) {
   const kkId = searchParams.get("kkId");
   const homebaseProdiId = searchParams.get("homebaseProdiId");
 
-  const activePeriode = await prisma.semesterPeriode.findFirst({ where: { aktif: true } });
-  if (!activePeriode) {
-    return NextResponse.json({ error: "No active SemesterPeriode is configured" }, { status: 400 });
+  const semesterResult = await resolveSemester(user, searchParams.get("semesterPeriodeId"));
+  if (!semesterResult.ok) {
+    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
   }
+  const activePeriode = semesterResult.semester;
 
   const dosenList = await prisma.dosen.findMany({
     where: {
@@ -38,7 +40,7 @@ export async function GET(request: Request) {
   const kelasList = await prisma.kelas.findMany({
     where: {
       dosenId: { not: null },
-      courseOffering: { semesterPeriodeId: activePeriode.id },
+      semesterPeriodeId: activePeriode.id,
     },
     select: {
       sks: true,

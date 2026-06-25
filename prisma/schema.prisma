@@ -125,14 +125,17 @@ model MataKuliah {
 }
 
 model SemesterPeriode {
-  id          String       @id @default(cuid())
-  nama        String
-  tipe        SemesterTipe
-  tahunAjaran String
-  aktif       Boolean      @default(false)
+  id                   String       @id @default(cuid())
+  nama                 String
+  tipe                 SemesterTipe
+  tahunAjaran          String
+  aktif                Boolean      @default(false)
+  // When true, Kaprodi/Ketua KK can see this (non-active) semester read-only.
+  visibleToScopedRoles Boolean      @default(false)
 
   courseOfferings CourseOffering[]
   prodiTargets    ProdiTarget[]
+  kelas           Kelas[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -173,27 +176,32 @@ model CourseOffering {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([mataKuliahId, kelasPrefix])
+  @@unique([semesterPeriodeId, mataKuliahId, kelasPrefix])
   @@index([semesterPeriodeId, prodiId])
   @@index([mataKuliahId])
   @@index([prodiId])
 }
 
 model Kelas {
-  id               String   @id @default(cuid())
-  courseOfferingId String
-  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id])
-  kodeKelas        String
-  sectionSuffix    String
-  sks              Float
-  dosenId          String?
-  dosen            Dosen?   @relation(fields: [dosenId], references: [id])
+  id                String          @id @default(cuid())
+  courseOfferingId  String
+  courseOffering    CourseOffering  @relation(fields: [courseOfferingId], references: [id])
+  // Denormalized from courseOffering.semesterPeriodeId for direct, efficient
+  // semester-scoped queries/write-guards without joining through CourseOffering.
+  semesterPeriodeId String
+  semesterPeriode   SemesterPeriode @relation(fields: [semesterPeriodeId], references: [id])
+  kodeKelas         String
+  sectionSuffix     String
+  sks               Float
+  dosenId           String?
+  dosen             Dosen?          @relation(fields: [dosenId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([courseOfferingId, sectionSuffix])
   @@index([courseOfferingId])
+  @@index([semesterPeriodeId])
   @@index([dosenId])
   @@index([kodeKelas])
 }

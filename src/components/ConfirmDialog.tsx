@@ -17,12 +17,14 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Delete",
+  variant = "destructive",
   onConfirm,
 }: {
   trigger: React.ReactNode;
   title: string;
   description: string;
   confirmLabel?: string;
+  variant?: "destructive" | "default";
   onConfirm: () => void;
 }) {
   return (
@@ -35,7 +37,7 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={onConfirm}>
+          <AlertDialogAction variant={variant} onClick={onConfirm}>
             {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
