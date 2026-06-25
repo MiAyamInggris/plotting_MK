@@ -3,6 +3,10 @@
 import { useState, type FormEvent } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -37,52 +41,45 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Plotting MK</h1>
-      <p className="mb-6 text-sm text-slate-500">Sign in to continue</p>
+    <Card className="w-full max-w-sm">
+      <CardHeader>
+        <CardTitle className="text-2xl font-semibold">Plotting MK</CardTitle>
+        <CardDescription>Sign in to continue</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-700">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            required
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-          />
-        </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
 
-        <div>
-          <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-          />
-        </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-        >
-          {submitting ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
-    </div>
+          <Button type="submit" disabled={submitting} className="w-full">
+            {submitting ? "Signing in…" : "Sign in"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

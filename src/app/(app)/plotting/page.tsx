@@ -21,22 +21,19 @@ export default async function PlottingPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Plotting</h1>
-      <p className="mt-1 text-sm text-slate-600">
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
         {canEdit
           ? "Assign or reassign dosen to course sections for the active semester."
           : "Read-only view of the current plotting."}
       </p>
-      <div className="mt-6">
-        <PlottingClient
-          programStudi={programStudi}
-          defaultProdiId={user?.prodiId ?? null}
-          canEdit={canEdit}
-          canManageSections={canEdit}
-          dosenOptions={dosenOptions}
-        />
-      </div>
+      <PlottingClient
+        programStudi={programStudi}
+        defaultProdiId={user?.prodiId ?? null}
+        canEdit={canEdit}
+        canManageSections={canEdit}
+        dosenOptions={dosenOptions}
+      />
     </div>
   );
 }

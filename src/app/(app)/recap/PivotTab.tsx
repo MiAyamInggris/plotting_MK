@@ -1,6 +1,13 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Pivot = {
   dosen: {
@@ -56,75 +63,89 @@ export default function PivotTab() {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={onSearch} className="flex items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Kode Dosen</label>
-          <input
-            value={kode}
-            onChange={(e) => setKode(e.target.value)}
-            placeholder="e.g. WPS"
-            className="w-40 rounded-md border border-slate-300 px-2 py-1.5 text-sm uppercase"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-        >
-          {loading ? "Searching…" : "Search"}
-        </button>
-      </form>
+      <Card>
+        <CardContent>
+          <form onSubmit={onSearch} className="flex items-end gap-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="pivot-kode" className="text-xs text-muted-foreground">
+                Kode Dosen
+              </Label>
+              <Input
+                id="pivot-kode"
+                value={kode}
+                onChange={(e) => setKode(e.target.value)}
+                placeholder="e.g. WPS"
+                className="w-40 uppercase"
+              />
+            </div>
+            <Button type="submit" disabled={loading}>
+              <Search className="size-4" />
+              {loading ? "Searching…" : "Search"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       {pivot && (
         <div className="space-y-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-sm font-semibold text-slate-900">
-              {pivot.dosen.kode} — {pivot.dosen.nama}
-            </p>
-            <p className="text-xs text-slate-500">
-              {pivot.dosen.jfa ?? "—"} · {pivot.dosen.kk ?? "—"} · Homebase{" "}
-              {pivot.dosen.homebaseProdi ?? "—"}
-              {pivot.dosen.bebanStruktural ? ` · Beban Struktural: ${pivot.dosen.bebanStruktural}` : ""}
-            </p>
-            <p className="mt-2 text-sm text-slate-700">
-              Total SKS: <span className="font-medium">{pivot.totalSks}</span> · Jumlah Kelas:{" "}
-              <span className="font-medium">{pivot.jumlahKelas}</span> · Jumlah MK:{" "}
-              <span className="font-medium">{pivot.jumlahMK}</span>
-            </p>
-          </div>
+          <Card>
+            <CardContent className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">
+                {pivot.dosen.kode} — {pivot.dosen.nama}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {pivot.dosen.jfa ?? "—"} · {pivot.dosen.kk ?? "—"} · Homebase{" "}
+                {pivot.dosen.homebaseProdi ?? "—"}
+                {pivot.dosen.bebanStruktural ? ` · Beban Struktural: ${pivot.dosen.bebanStruktural}` : ""}
+              </p>
+              <p className="pt-1 text-sm text-foreground">
+                Total SKS: <span className="font-medium">{pivot.totalSks}</span> · Jumlah Kelas:{" "}
+                <span className="font-medium">{pivot.jumlahKelas}</span> · Jumlah MK:{" "}
+                <span className="font-medium">{pivot.jumlahMK}</span>
+              </p>
+            </CardContent>
+          </Card>
 
           {pivot.byProdi.map((p) => (
-            <div key={p.prodiKode} className="rounded-lg border border-slate-200 bg-white p-4">
-              <h3 className="text-sm font-semibold text-slate-900">
-                {p.prodiKode} — {p.prodiNama} ({p.sks} sks)
-              </h3>
-              <table className="mt-2 w-full text-sm">
-                <thead className="text-left text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="py-1">Kelas</th>
-                    <th className="py-1">Kode MK</th>
-                    <th className="py-1">Nama MK</th>
-                    <th className="py-1">Semester</th>
-                    <th className="py-1">SKS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {p.kelas.map((k) => (
-                    <tr key={k.id} className="border-t border-slate-100">
-                      <td className="py-1">{k.kodeKelas}</td>
-                      <td className="py-1">{k.kodeMK}</td>
-                      <td className="py-1">{k.namaMK}</td>
-                      <td className="py-1">
-                        {k.semesterKe} | {k.tahunAngkatan}
-                      </td>
-                      <td className="py-1">{k.sks}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Card key={p.prodiKode}>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  {p.prodiKode} — {p.prodiNama} ({p.sks} sks)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kelas</TableHead>
+                      <TableHead>Kode MK</TableHead>
+                      <TableHead>Nama MK</TableHead>
+                      <TableHead>Semester</TableHead>
+                      <TableHead className="text-right">SKS</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {p.kelas.map((k) => (
+                      <TableRow key={k.id}>
+                        <TableCell>{k.kodeKelas}</TableCell>
+                        <TableCell>{k.kodeMK}</TableCell>
+                        <TableCell>{k.namaMK}</TableCell>
+                        <TableCell>
+                          {k.semesterKe} | {k.tahunAngkatan}
+                        </TableCell>
+                        <TableCell className="text-right">{k.sks}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

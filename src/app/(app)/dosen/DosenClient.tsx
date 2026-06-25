@@ -1,6 +1,34 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Search, Plus, GraduationCap } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { EmptyState } from "@/components/EmptyState";
+import { TableSkeleton } from "@/components/TableSkeleton";
+import { StatusBadge } from "@/components/StatusBadge";
 
 type TingkatPendidikan = "S2" | "S3" | "ON_GOING_S3";
 
@@ -38,6 +66,8 @@ const JFA_OPTIONS = [
 ];
 
 const TINGKAT_OPTIONS: TingkatPendidikan[] = ["S2", "S3", "ON_GOING_S3"];
+const ALL = "__all__";
+const NONE = "__none__";
 
 type FormState = {
   kode: string;
@@ -92,164 +122,169 @@ function DosenFields({
   programStudi,
   kelompokKeahlian,
   coeList,
+  idPrefix,
 }: {
   value: FormState;
   onChange: (next: FormState) => void;
   programStudi: ProgramStudi[];
   kelompokKeahlian: KelompokKeahlian[];
   coeList: Coe[];
+  idPrefix: string;
 }) {
   function set<K extends keyof FormState>(key: K, v: string) {
     onChange({ ...value, [key]: v });
   }
 
   return (
-    <>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Kode</label>
-        <input
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-kode`}>Kode</Label>
+        <Input
+          id={`${idPrefix}-kode`}
           required
           maxLength={10}
           value={value.kode}
           onChange={(e) => set("kode", e.target.value.toUpperCase())}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Nama</label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-nama`}>Nama</Label>
+        <Input
+          id={`${idPrefix}-nama`}
           required
           value={value.nama}
           onChange={(e) => set("nama", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">
-          Nama tanpa gelar
-        </label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-nama-tanpa-gelar`}>Nama tanpa gelar</Label>
+        <Input
+          id={`${idPrefix}-nama-tanpa-gelar`}
           required
           value={value.namaTanpaGelar}
           onChange={(e) => set("namaTanpaGelar", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">NIP YPT</label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-nip`}>NIP YPT</Label>
+        <Input
+          id={`${idPrefix}-nip`}
           value={value.nipYpt}
           onChange={(e) => set("nipYpt", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">NIDN/NUPTK</label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-nidn`}>NIDN/NUPTK</Label>
+        <Input
+          id={`${idPrefix}-nidn`}
           value={value.nidn}
           onChange={(e) => set("nidn", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">JFA</label>
-        <select
-          value={value.jfa}
-          onChange={(e) => set("jfa", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-        >
-          <option value="">—</option>
-          {JFA_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-jfa`}>JFA</Label>
+        <Select value={value.jfa || NONE} onValueChange={(v) => set("jfa", v === NONE ? "" : v)}>
+          <SelectTrigger id={`${idPrefix}-jfa`} className="w-full">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>—</SelectItem>
+            {JFA_OPTIONS.map((opt) => (
+              <SelectItem key={opt} value={opt}>
+                {opt}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">TMT JFA</label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-tmt-jfa`}>TMT JFA</Label>
+        <Input
+          id={`${idPrefix}-tmt-jfa`}
           type="date"
           value={value.tmtJfa}
           onChange={(e) => set("tmtJfa", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Homebase Prodi</label>
-        <select
-          value={value.homebaseProdiId}
-          onChange={(e) => set("homebaseProdiId", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-homebase`}>Homebase Prodi</Label>
+        <Select
+          value={value.homebaseProdiId || NONE}
+          onValueChange={(v) => set("homebaseProdiId", v === NONE ? "" : v)}
         >
-          <option value="">—</option>
-          {programStudi.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.kode} — {p.nama}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id={`${idPrefix}-homebase`} className="w-full">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>—</SelectItem>
+            {programStudi.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.kode} — {p.nama}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">
-          Tingkat Pendidikan
-        </label>
-        <select
-          value={value.tingkatPendidikan}
-          onChange={(e) => set("tingkatPendidikan", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-tingkat`}>Tingkat Pendidikan</Label>
+        <Select
+          value={value.tingkatPendidikan || NONE}
+          onValueChange={(v) => set("tingkatPendidikan", v === NONE ? "" : v)}
         >
-          <option value="">—</option>
-          {TINGKAT_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id={`${idPrefix}-tingkat`} className="w-full">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>—</SelectItem>
+            {TINGKAT_OPTIONS.map((opt) => (
+              <SelectItem key={opt} value={opt}>
+                {opt}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">
-          Kelompok Keahlian
-        </label>
-        <select
-          value={value.kkId}
-          onChange={(e) => set("kkId", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-        >
-          <option value="">—</option>
-          {kelompokKeahlian.map((k) => (
-            <option key={k.id} value={k.id}>
-              {k.nama}
-            </option>
-          ))}
-        </select>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-kk`}>Kelompok Keahlian</Label>
+        <Select value={value.kkId || NONE} onValueChange={(v) => set("kkId", v === NONE ? "" : v)}>
+          <SelectTrigger id={`${idPrefix}-kk`} className="w-full">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>—</SelectItem>
+            {kelompokKeahlian.map((k) => (
+              <SelectItem key={k.id} value={k.id}>
+                {k.nama}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">COE</label>
-        <select
-          value={value.coeId}
-          onChange={(e) => set("coeId", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-        >
-          <option value="">—</option>
-          {coeList.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nama}
-            </option>
-          ))}
-        </select>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-coe`}>COE</Label>
+        <Select value={value.coeId || NONE} onValueChange={(v) => set("coeId", v === NONE ? "" : v)}>
+          <SelectTrigger id={`${idPrefix}-coe`} className="w-full">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>—</SelectItem>
+            {coeList.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.nama}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">
-          Beban Struktural
-        </label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-beban`}>Beban Struktural</Label>
+        <Input
+          id={`${idPrefix}-beban`}
           value={value.bebanStruktural}
           onChange={(e) => set("bebanStruktural", e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
       </div>
-    </>
+    </div>
   );
 }
 
@@ -259,45 +294,48 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
   const [kelompokKeahlian, setKelompokKeahlian] = useState<KelompokKeahlian[]>([]);
   const [coeList, setCoeList] = useState<Coe[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
-  const [filterKkId, setFilterKkId] = useState("");
-  const [filterProdiId, setFilterProdiId] = useState("");
-  const [filterJfa, setFilterJfa] = useState("");
-  const [filterCoeId, setFilterCoeId] = useState("");
-  const [filterTingkat, setFilterTingkat] = useState("");
-  const [filterAktif, setFilterAktif] = useState("");
+  const [filterKkId, setFilterKkId] = useState(ALL);
+  const [filterProdiId, setFilterProdiId] = useState(ALL);
+  const [filterJfa, setFilterJfa] = useState(ALL);
+  const [filterCoeId, setFilterCoeId] = useState(ALL);
+  const [filterTingkat, setFilterTingkat] = useState(ALL);
+  const [filterAktif, setFilterAktif] = useState(ALL);
 
-  const [showCreate, setShowCreate] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<FormState>(EMPTY_FORM);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    if (filterKkId) params.set("kkId", filterKkId);
-    if (filterProdiId) params.set("homebaseProdiId", filterProdiId);
-    if (filterJfa) params.set("jfa", filterJfa);
-    if (filterCoeId) params.set("coeId", filterCoeId);
-    if (filterTingkat) params.set("tingkatPendidikan", filterTingkat);
-    if (filterAktif) params.set("aktif", filterAktif);
+    if (filterKkId !== ALL) params.set("kkId", filterKkId);
+    if (filterProdiId !== ALL) params.set("homebaseProdiId", filterProdiId);
+    if (filterJfa !== ALL) params.set("jfa", filterJfa);
+    if (filterCoeId !== ALL) params.set("coeId", filterCoeId);
+    if (filterTingkat !== ALL) params.set("tingkatPendidikan", filterTingkat);
+    if (filterAktif !== ALL) params.set("aktif", filterAktif);
     return params.toString();
   }, [search, filterKkId, filterProdiId, filterJfa, filterCoeId, filterTingkat, filterAktif]);
 
   async function loadDosen() {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const res = await fetch(`/api/dosen${query ? `?${query}` : ""}`);
       if (!res.ok) throw new Error("Failed to load dosen");
       const data = await res.json();
       setItems(data.dosen);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load dosen");
+      setLoadError(e instanceof Error ? e.message : "Failed to load dosen");
     } finally {
       setLoading(false);
     }
@@ -326,7 +364,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setCreating(true);
-    setError(null);
+    setCreateError(null);
     try {
       const res = await fetch("/api/dosen", {
         method: "POST",
@@ -338,10 +376,11 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
         throw new Error(typeof data.error === "string" ? data.error : "Failed to create");
       }
       setCreateForm(EMPTY_FORM);
-      setShowCreate(false);
+      setCreateOpen(false);
+      toast.success("Dosen created");
       await loadDosen();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create");
+      setCreateError(e instanceof Error ? e.message : "Failed to create");
     } finally {
       setCreating(false);
     }
@@ -349,6 +388,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
 
   function startEdit(d: Dosen) {
     setEditingId(d.id);
+    setEditError(null);
     setEditForm({
       kode: d.kode,
       nama: d.nama,
@@ -365,10 +405,13 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
     });
   }
 
-  async function saveEdit(id: string) {
-    setError(null);
+  async function saveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingId) return;
+    setSaving(true);
+    setEditError(null);
     try {
-      const res = await fetch(`/api/dosen/${id}`, {
+      const res = await fetch(`/api/dosen/${editingId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(toPayload(editForm)),
@@ -378,14 +421,16 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
         throw new Error(typeof data.error === "string" ? data.error : "Failed to update");
       }
       setEditingId(null);
+      toast.success("Dosen updated");
       await loadDosen();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update");
+      setEditError(e instanceof Error ? e.message : "Failed to update");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function toggleActive(d: Dosen) {
-    setError(null);
     try {
       const res = await fetch(`/api/dosen/${d.id}`, {
         method: "PATCH",
@@ -393,251 +438,250 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify({ aktif: !d.aktif }),
       });
       if (!res.ok) throw new Error("Failed to update");
+      toast.success(d.aktif ? "Dosen deactivated" : "Dosen activated");
       await loadDosen();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update");
+      toast.error(e instanceof Error ? e.message : "Failed to update");
     }
   }
 
+  const columnCount = canEdit ? 10 : 9;
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Search</label>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="kode or nama"
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">KK</label>
-          <select
-            value={filterKkId}
-            onChange={(e) => setFilterKkId(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All</option>
-            {kelompokKeahlian.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.nama}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Homebase</label>
-          <select
-            value={filterProdiId}
-            onChange={(e) => setFilterProdiId(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All</option>
-            {programStudi.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.kode}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">JFA</label>
-          <select
-            value={filterJfa}
-            onChange={(e) => setFilterJfa(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All</option>
-            {JFA_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">COE</label>
-          <select
-            value={filterCoeId}
-            onChange={(e) => setFilterCoeId(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All</option>
-            {coeList.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nama}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Pendidikan</label>
-          <select
-            value={filterTingkat}
-            onChange={(e) => setFilterTingkat(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All</option>
-            {TINGKAT_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Active</label>
-          <select
-            value={filterAktif}
-            onChange={(e) => setFilterAktif(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All</option>
-            <option value="true">Active</option>
-            <option value="false">Inactive</option>
-          </select>
-        </div>
-
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Dosen</CardTitle>
         {canEdit && (
-          <button
-            onClick={() => setShowCreate((v) => !v)}
-            className="ml-auto rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            {showCreate ? "Close" : "+ New Dosen"}
-          </button>
+          <Sheet open={createOpen} onOpenChange={setCreateOpen}>
+            <SheetTrigger asChild>
+              <Button>
+                <Plus className="size-4" />
+                Add Dosen
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-lg">
+              <SheetHeader className="border-b border-border">
+                <SheetTitle>Create Dosen</SheetTitle>
+              </SheetHeader>
+              <form onSubmit={onCreate} className="flex flex-1 flex-col">
+                <div className="flex-1 space-y-4 p-4">
+                  <DosenFields
+                    value={createForm}
+                    onChange={setCreateForm}
+                    programStudi={programStudi}
+                    kelompokKeahlian={kelompokKeahlian}
+                    coeList={coeList}
+                    idPrefix="create"
+                  />
+                  {createError && <p className="text-sm text-destructive">{createError}</p>}
+                </div>
+                <SheetFooter className="border-t border-border">
+                  <Button type="submit" disabled={creating}>
+                    {creating ? "Creating…" : "Create"}
+                  </Button>
+                </SheetFooter>
+              </form>
+            </SheetContent>
+          </Sheet>
         )}
-      </div>
+      </CardHeader>
 
-      {showCreate && canEdit && (
-        <form
-          onSubmit={onCreate}
-          className="grid grid-cols-3 gap-4 rounded-lg border border-slate-200 bg-white p-4"
-        >
-          <h2 className="col-span-3 text-sm font-semibold text-slate-900">Create Dosen</h2>
-          <DosenFields
-            value={createForm}
-            onChange={setCreateForm}
-            programStudi={programStudi}
-            kelompokKeahlian={kelompokKeahlian}
-            coeList={coeList}
-          />
-          <div className="col-span-3">
-            <button
-              type="submit"
-              disabled={creating}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-            >
-              {creating ? "Creating…" : "Create"}
-            </button>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Search</Label>
+            <InputGroup className="w-48">
+              <InputGroupAddon>
+                <Search className="size-4" />
+              </InputGroupAddon>
+              <InputGroupInput
+                placeholder="kode or nama"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </InputGroup>
           </div>
-        </form>
-      )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">KK</Label>
+            <Select value={filterKkId} onValueChange={setFilterKkId}>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All</SelectItem>
+                {kelompokKeahlian.map((k) => (
+                  <SelectItem key={k.id} value={k.id}>{k.nama}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-3 py-2">Kode</th>
-              <th className="px-3 py-2">Nama</th>
-              <th className="px-3 py-2">NIP/NIDN</th>
-              <th className="px-3 py-2">JFA</th>
-              <th className="px-3 py-2">Homebase</th>
-              <th className="px-3 py-2">Pendidikan</th>
-              <th className="px-3 py-2">KK</th>
-              <th className="px-3 py-2">COE</th>
-              <th className="px-3 py-2">Beban Struktural</th>
-              <th className="px-3 py-2">Active</th>
-              {canEdit && <th className="px-3 py-2">Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Homebase</Label>
+            <Select value={filterProdiId} onValueChange={setFilterProdiId}>
+              <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All</SelectItem>
+                {programStudi.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.kode}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">JFA</Label>
+            <Select value={filterJfa} onValueChange={setFilterJfa}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All</SelectItem>
+                {JFA_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">COE</Label>
+            <Select value={filterCoeId} onValueChange={setFilterCoeId}>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All</SelectItem>
+                {coeList.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.nama}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Pendidikan</Label>
+            <Select value={filterTingkat} onValueChange={setFilterTingkat}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All</SelectItem>
+                {TINGKAT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Active</Label>
+            <Select value={filterAktif} onValueChange={setFilterAktif}>
+              <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All</SelectItem>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {loadError && (
+          <Alert variant="destructive">
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
+        )}
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="sticky top-0 bg-card">Kode</TableHead>
+              <TableHead className="sticky top-0 bg-card">Nama</TableHead>
+              <TableHead className="sticky top-0 bg-card">NIP/NIDN</TableHead>
+              <TableHead className="sticky top-0 bg-card">JFA</TableHead>
+              <TableHead className="sticky top-0 bg-card">Homebase</TableHead>
+              <TableHead className="sticky top-0 bg-card">Pendidikan</TableHead>
+              <TableHead className="sticky top-0 bg-card">KK</TableHead>
+              <TableHead className="sticky top-0 bg-card">COE</TableHead>
+              <TableHead className="sticky top-0 bg-card">Status</TableHead>
+              {canEdit && (
+                <TableHead className="sticky top-0 bg-card text-right">Actions</TableHead>
+              )}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading ? (
-              <tr>
-                <td colSpan={canEdit ? 11 : 10} className="px-4 py-4 text-center text-slate-500">
-                  Loading…
-                </td>
-              </tr>
+              <TableSkeleton columns={columnCount} />
             ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={canEdit ? 11 : 10} className="px-4 py-4 text-center text-slate-500">
-                  No dosen found.
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={columnCount}>
+                  <EmptyState icon={GraduationCap} title="No dosen found" />
+                </TableCell>
+              </TableRow>
             ) : (
               items.map((d) => (
-                <Fragment key={d.id}>
-                  <tr className="border-t border-slate-100">
-                    <td className="px-3 py-2 font-medium">{d.kode}</td>
-                    <td className="px-3 py-2">{d.nama}</td>
-                    <td className="px-3 py-2 text-xs text-slate-500">
-                      {d.nipYpt ?? "—"} / {d.nidn ?? "—"}
-                    </td>
-                    <td className="px-3 py-2">{d.jfa ?? "—"}</td>
-                    <td className="px-3 py-2">{d.homebaseProdi?.kode ?? "—"}</td>
-                    <td className="px-3 py-2">{d.tingkatPendidikan ?? "—"}</td>
-                    <td className="px-3 py-2">{d.kk?.nama ?? "—"}</td>
-                    <td className="px-3 py-2">{d.coe?.nama ?? "—"}</td>
-                    <td className="px-3 py-2">{d.bebanStruktural ?? "—"}</td>
-                    <td className="px-3 py-2">{d.aktif ? "Yes" : "No"}</td>
-                    {canEdit && (
-                      <td className="px-3 py-2">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() =>
-                              editingId === d.id ? setEditingId(null) : startEdit(d)
-                            }
-                            className="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100"
-                          >
-                            {editingId === d.id ? "Close" : "Edit"}
-                          </button>
-                          <button
-                            onClick={() => toggleActive(d)}
-                            className="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100"
-                          >
-                            {d.aktif ? "Deactivate" : "Activate"}
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                  {editingId === d.id && canEdit && (
-                    <tr className="border-t border-slate-100 bg-slate-50">
-                      <td colSpan={11} className="px-4 py-4">
-                        <div className="grid grid-cols-3 gap-4">
-                          <DosenFields
-                            value={editForm}
-                            onChange={setEditForm}
-                            programStudi={programStudi}
-                            kelompokKeahlian={kelompokKeahlian}
-                            coeList={coeList}
-                          />
-                        </div>
-                        <div className="mt-4 flex gap-2">
-                          <button
-                            onClick={() => saveEdit(d.id)}
-                            className="rounded-md bg-slate-900 px-3 py-1.5 text-sm text-white"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                <TableRow key={d.id} className="h-12">
+                  <TableCell className="font-medium">{d.kode}</TableCell>
+                  <TableCell>{d.nama}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {d.nipYpt ?? "—"} / {d.nidn ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    {d.jfa ? <Badge variant="outline">{d.jfa}</Badge> : "—"}
+                  </TableCell>
+                  <TableCell>{d.homebaseProdi?.kode ?? "—"}</TableCell>
+                  <TableCell>{d.tingkatPendidikan ?? "—"}</TableCell>
+                  <TableCell>
+                    {d.kk ? <Badge variant="outline">{d.kk.nama}</Badge> : "—"}
+                  </TableCell>
+                  <TableCell>{d.coe?.nama ?? "—"}</TableCell>
+                  <TableCell>
+                    <StatusBadge active={d.aktif} />
+                  </TableCell>
+                  {canEdit && (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => startEdit(d)}>
+                          Edit
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => toggleActive(d)}>
+                          {d.aktif ? "Deactivate" : "Activate"}
+                        </Button>
+                      </div>
+                    </TableCell>
                   )}
-                </Fragment>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </TableBody>
+        </Table>
+
+        {!loading && (
+          <p className="text-sm text-muted-foreground">{items.length} item(s)</p>
+        )}
+      </CardContent>
+
+      {canEdit && (
+        <Sheet open={editingId !== null} onOpenChange={(open) => !open && setEditingId(null)}>
+          <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-lg">
+            <SheetHeader className="border-b border-border">
+              <SheetTitle>Edit Dosen</SheetTitle>
+            </SheetHeader>
+            <form onSubmit={saveEdit} className="flex flex-1 flex-col">
+              <div className="flex-1 space-y-4 p-4">
+                <DosenFields
+                  value={editForm}
+                  onChange={setEditForm}
+                  programStudi={programStudi}
+                  kelompokKeahlian={kelompokKeahlian}
+                  coeList={coeList}
+                  idPrefix="edit"
+                />
+                {editError && <p className="text-sm text-destructive">{editError}</p>}
+              </div>
+              <SheetFooter className="border-t border-border">
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save"}
+                </Button>
+              </SheetFooter>
+            </form>
+          </SheetContent>
+        </Sheet>
+      )}
+    </Card>
   );
 }

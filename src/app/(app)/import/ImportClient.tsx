@@ -1,6 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Upload, FolderOpen } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 type ImportWarning = {
   level: "warning" | "error";
@@ -15,14 +21,17 @@ type ImportReport = {
 
 function ReportView({ report }: { report: ImportReport }) {
   return (
-    <div className="mt-4 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
+    <div className="mt-4 space-y-3 rounded-lg border border-border bg-muted/30 p-4">
       <div>
-        <h3 className="text-xs font-semibold uppercase text-slate-500">Counts</h3>
-        <dl className="mt-1 grid grid-cols-2 gap-1 text-sm sm:grid-cols-3">
+        <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Counts</h3>
+        <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
           {Object.entries(report.counts).map(([key, value]) => (
-            <div key={key} className="flex justify-between gap-2 rounded bg-white px-2 py-1">
-              <dt className="text-slate-500">{key}</dt>
-              <dd className="font-medium text-slate-900">{value}</dd>
+            <div
+              key={key}
+              className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-1.5"
+            >
+              <dt className="text-muted-foreground">{key}</dt>
+              <dd className="font-medium text-foreground">{value}</dd>
             </div>
           ))}
         </dl>
@@ -30,16 +39,19 @@ function ReportView({ report }: { report: ImportReport }) {
 
       {report.warnings.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold uppercase text-slate-500">
+          <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Warnings ({report.warnings.length})
           </h3>
-          <ul className="mt-1 max-h-64 space-y-1 overflow-y-auto text-sm">
+          <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto text-sm">
             {report.warnings.map((w, i) => (
               <li
                 key={i}
-                className={`rounded px-2 py-1 ${
-                  w.level === "error" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-800"
-                }`}
+                className={cn(
+                  "rounded-md px-2.5 py-1.5",
+                  w.level === "error"
+                    ? "bg-destructive/10 text-destructive"
+                    : "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400",
+                )}
               >
                 {w.context && <span className="font-mono text-xs opacity-70">[{w.context}] </span>}
                 {w.message}
@@ -91,40 +103,53 @@ function ImportSection({
         throw new Error(typeof data.error === "string" ? data.error : "Import failed");
       }
       setReport(data.report);
+      toast.success("Import completed");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Import failed");
+      const message = e instanceof Error ? e.message : "Import failed";
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-      <p className="mt-1 text-sm text-slate-600">{description}</p>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="text-sm text-muted-foreground"
+          />
+          <Button onClick={() => runImport({ local: false })} disabled={busy}>
+            <Upload className="size-4" />
+            {busy ? "Importing…" : "Upload & Import"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => runImport({ local: true })}
+            disabled={busy}
+            title="Reads the file directly from the local data/ folder (dev only)"
+          >
+            <FolderOpen className="size-4" />
+            Use local data/ file
+          </Button>
+        </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="text-sm" />
-        <button
-          onClick={() => runImport({ local: false })}
-          disabled={busy}
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-        >
-          {busy ? "Importing…" : "Upload & Import"}
-        </button>
-        <button
-          onClick={() => runImport({ local: true })}
-          disabled={busy}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 disabled:opacity-50"
-          title="Reads the file directly from the local data/ folder (dev only)"
-        >
-          Use local data/ file
-        </button>
-      </div>
-
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      {report && <ReportView report={report} />}
-    </div>
+        {error && (
+          <Alert variant="destructive" className="mt-3">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {report && <ReportView report={report} />}
+      </CardContent>
+    </Card>
   );
 }
 

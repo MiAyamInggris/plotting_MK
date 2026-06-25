@@ -1,6 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Plus, X, CalendarRange } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { cn } from "@/lib/utils";
 import DosenPicker, { type DosenOption } from "./DosenPicker";
 
 type Dosen = { id: string; kode: string; nama: string; kkId: string | null; aktif: boolean };
@@ -30,14 +48,11 @@ type MataKuliahRow = {
 type ProgramStudi = { id: string; kode: string; nama: string };
 type RuleWarning = { level: "error" | "warning"; code: string; message: string };
 
-function SectionBadge({
+function SectionChip({
   kelas,
   canEdit,
   canManageSections,
   dosenOptions,
-  editing,
-  onStartEdit,
-  onCancelEdit,
   onAssign,
   onClear,
   onRemove,
@@ -47,54 +62,59 @@ function SectionBadge({
   canEdit: boolean;
   canManageSections: boolean;
   dosenOptions: DosenOption[];
-  editing: boolean;
-  onStartEdit: () => void;
-  onCancelEdit: () => void;
   onAssign: (dosenId: string) => void;
   onClear: () => void;
   onRemove: () => void;
   saving: boolean;
 }) {
   return (
-    <div className="relative flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs">
-      <span className="font-mono text-slate-500">{kelas.sectionSuffix}</span>
-      <span className={kelas.dosen ? "text-slate-900" : "italic text-slate-400"}>
+    <div className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-xs">
+      <span className="font-mono text-muted-foreground">{kelas.sectionSuffix}</span>
+      <span className={kelas.dosen ? "text-foreground" : "text-muted-foreground italic"}>
         {kelas.dosen ? `${kelas.dosen.kode} — ${kelas.dosen.nama}` : "unassigned"}
       </span>
-      <span className="text-slate-400">({kelas.sks} sks)</span>
+      <span className="text-muted-foreground">({kelas.sks} sks)</span>
 
       {canEdit && (
         <>
-          <button
-            onClick={onStartEdit}
-            disabled={saving}
-            className="ml-1 rounded border border-slate-300 px-1.5 py-0.5 hover:bg-slate-100 disabled:opacity-50"
-          >
-            {saving ? "…" : "Change"}
-          </button>
+          <DosenPicker
+            options={dosenOptions}
+            onSelect={onAssign}
+            trigger={
+              <Button variant="outline" size="sm" className="h-6 px-1.5 text-xs" disabled={saving}>
+                {saving ? "…" : "Change"}
+              </Button>
+            }
+          />
           {kelas.dosen && (
-            <button
-              onClick={onClear}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 px-1.5 text-xs"
               disabled={saving}
-              className="rounded border border-slate-300 px-1.5 py-0.5 hover:bg-slate-100 disabled:opacity-50"
+              onClick={onClear}
             >
               Clear
-            </button>
+            </Button>
           )}
         </>
       )}
       {canManageSections && (
-        <button
-          onClick={onRemove}
-          disabled={saving}
-          className="rounded border border-red-200 px-1.5 py-0.5 text-red-600 hover:bg-red-50 disabled:opacity-50"
-        >
-          ✕
-        </button>
-      )}
-
-      {editing && (
-        <DosenPicker options={dosenOptions} onSelect={onAssign} onCancel={onCancelEdit} />
+        <ConfirmDialog
+          trigger={
+            <Button
+              variant="outline"
+              size="icon-sm"
+              className="size-6 text-destructive"
+              disabled={saving}
+            >
+              <X className="size-3" />
+            </Button>
+          }
+          title="Remove this section?"
+          description={`Section ${kelas.sectionSuffix} will be permanently removed. This cannot be undone.`}
+          onConfirm={onRemove}
+        />
       )}
     </div>
   );
@@ -118,8 +138,7 @@ export default function PlottingClient({
   );
   const [mataKuliah, setMataKuliah] = useState<MataKuliahRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [editingKelasId, setEditingKelasId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [savingKelasId, setSavingKelasId] = useState<string | null>(null);
   const [warningsByKelas, setWarningsByKelas] = useState<Record<string, RuleWarning[]>>({});
   const [sectionForms, setSectionForms] = useState<Record<string, string>>({});
@@ -127,14 +146,14 @@ export default function PlottingClient({
   async function load() {
     if (!selectedProdiId) return;
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const res = await fetch(`/api/plotting?prodiId=${selectedProdiId}`);
       if (!res.ok) throw new Error("Failed to load plotting data");
       const data = await res.json();
       setMataKuliah(data.mataKuliah);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load plotting data");
+      setLoadError(e instanceof Error ? e.message : "Failed to load plotting data");
     } finally {
       setLoading(false);
     }
@@ -166,8 +185,6 @@ export default function PlottingClient({
 
   async function assignDosen(kelasId: string, dosenId: string) {
     setSavingKelasId(kelasId);
-    setEditingKelasId(null);
-    setError(null);
     try {
       const res = await fetch(`/api/plotting/kelas/${kelasId}`, {
         method: "PATCH",
@@ -177,9 +194,10 @@ export default function PlottingClient({
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to assign");
       setWarningsByKelas((prev) => ({ ...prev, [kelasId]: data.warnings ?? [] }));
+      toast.success("Dosen assigned");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to assign dosen");
+      toast.error(e instanceof Error ? e.message : "Failed to assign dosen");
     } finally {
       setSavingKelasId(null);
     }
@@ -187,7 +205,6 @@ export default function PlottingClient({
 
   async function clearDosen(kelasId: string) {
     setSavingKelasId(kelasId);
-    setError(null);
     try {
       const res = await fetch(`/api/plotting/kelas/${kelasId}`, {
         method: "PATCH",
@@ -197,27 +214,27 @@ export default function PlottingClient({
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to clear");
       setWarningsByKelas((prev) => ({ ...prev, [kelasId]: [] }));
+      toast.success("Dosen cleared");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to clear dosen");
+      toast.error(e instanceof Error ? e.message : "Failed to clear dosen");
     } finally {
       setSavingKelasId(null);
     }
   }
 
   async function removeSection(kelasId: string) {
-    if (!window.confirm("Remove this section? This cannot be undone.")) return;
     setSavingKelasId(kelasId);
-    setError(null);
     try {
       const res = await fetch(`/api/plotting/kelas/${kelasId}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(typeof data.error === "string" ? data.error : "Failed to remove section");
       }
+      toast.success("Section removed");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to remove section");
+      toast.error(e instanceof Error ? e.message : "Failed to remove section");
     } finally {
       setSavingKelasId(null);
     }
@@ -227,7 +244,6 @@ export default function PlottingClient({
     e.preventDefault();
     const suffix = sectionForms[courseOfferingId]?.trim();
     if (!suffix) return;
-    setError(null);
     try {
       const res = await fetch("/api/plotting/kelas", {
         method: "POST",
@@ -239,9 +255,10 @@ export default function PlottingClient({
         throw new Error(typeof data.error === "string" ? data.error : "Failed to add section");
       }
       setSectionForms((prev) => ({ ...prev, [courseOfferingId]: "" }));
+      toast.success("Section added");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add section");
+      toast.error(e instanceof Error ? e.message : "Failed to add section");
     }
   }
 
@@ -249,92 +266,109 @@ export default function PlottingClient({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
-        <label className="mb-1 block text-xs font-medium text-slate-600">Program Studi</label>
-        <select
-          value={selectedProdiId}
-          onChange={(e) => setSelectedProdiId(e.target.value)}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-        >
-          {programStudi.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.kode} — {p.nama}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Card>
+        <CardContent>
+          <div className="max-w-sm space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Program Studi</Label>
+            <Select value={selectedProdiId} onValueChange={setSelectedProdiId}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {programStudi.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.kode} — {p.nama}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {loadError && (
+        <Alert variant="destructive">
+          <AlertDescription>{loadError}</AlertDescription>
+        </Alert>
+      )}
       {allWarnings.length > 0 && (
-        <div className="space-y-1 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          {allWarnings.map((w, i) => (
-            <p key={i}>⚠ {w.message}</p>
-          ))}
-        </div>
+        <Alert className="border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+          <AlertDescription className="space-y-1 text-amber-800 dark:text-amber-400">
+            {allWarnings.map((w, i) => <p key={i}>{w.message}</p>)}
+          </AlertDescription>
+        </Alert>
       )}
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading…</p>
+        <div className="space-y-3">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
       ) : blocks.length === 0 ? (
-        <p className="text-sm text-slate-500">No courses found for this prodi in the active period.</p>
+        <Card>
+          <CardContent>
+            <EmptyState
+              icon={CalendarRange}
+              title="No courses found"
+              description="No courses found for this prodi in the active period."
+            />
+          </CardContent>
+        </Card>
       ) : (
         blocks.map((block) => (
-          <div key={`${block.semesterKe}-${block.tahunAngkatan}`} className="space-y-2">
-            <h2 className="text-sm font-semibold text-slate-900">
+          <div key={`${block.semesterKe}-${block.tahunAngkatan}`} className="space-y-3">
+            <h2 className="text-lg font-medium text-foreground">
               Semester {block.semesterKe} | Tahun Angkatan {block.tahunAngkatan}
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {block.rows
                 .sort((a, b) => a.mk.kodeMK.localeCompare(b.mk.kodeMK))
                 .map(({ mk, co }) => (
-                  <div key={co.id} className="rounded-lg border border-slate-200 bg-white p-3">
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-medium text-slate-900">{mk.kodeMK}</span>
-                      <span className="text-slate-700">{mk.nama}</span>
-                      <span className="text-xs text-slate-500">
-                        ({mk.sks} sks{mk.ket ? `, ${mk.ket}` : ""})
-                      </span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {co.kelas.map((k) => (
-                        <SectionBadge
-                          key={k.id}
-                          kelas={k}
-                          canEdit={canEdit}
-                          canManageSections={canManageSections}
-                          dosenOptions={dosenOptions}
-                          editing={editingKelasId === k.id}
-                          onStartEdit={() => setEditingKelasId(k.id)}
-                          onCancelEdit={() => setEditingKelasId(null)}
-                          onAssign={(dosenId) => assignDosen(k.id, dosenId)}
-                          onClear={() => clearDosen(k.id)}
-                          onRemove={() => removeSection(k.id)}
-                          saving={savingKelasId === k.id}
-                        />
-                      ))}
-                    </div>
-                    {canManageSections && (
-                      <form
-                        onSubmit={(e) => addSection(co.id, e)}
-                        className="mt-2 flex items-center gap-2"
-                      >
-                        <input
-                          placeholder="new suffix, e.g. 09"
-                          value={sectionForms[co.id] ?? ""}
-                          onChange={(e) =>
-                            setSectionForms((prev) => ({ ...prev, [co.id]: e.target.value }))
-                          }
-                          className="w-32 rounded-md border border-slate-300 px-2 py-1 text-xs"
-                        />
-                        <button
-                          type="submit"
-                          className="rounded-md border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100"
+                  <Card key={co.id}>
+                    <CardContent>
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-medium text-foreground">{mk.kodeMK}</span>
+                        <span className="text-foreground">{mk.nama}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({mk.sks} sks{mk.ket ? `, ${mk.ket}` : ""})
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {co.kelas.map((k) => (
+                          <SectionChip
+                            key={k.id}
+                            kelas={k}
+                            canEdit={canEdit}
+                            canManageSections={canManageSections}
+                            dosenOptions={dosenOptions}
+                            onAssign={(dosenId) => assignDosen(k.id, dosenId)}
+                            onClear={() => clearDosen(k.id)}
+                            onRemove={() => removeSection(k.id)}
+                            saving={savingKelasId === k.id}
+                          />
+                        ))}
+                      </div>
+                      {canManageSections && (
+                        <form
+                          onSubmit={(e) => addSection(co.id, e)}
+                          className={cn("mt-2 flex items-center gap-2")}
                         >
-                          + Add section
-                        </button>
-                      </form>
-                    )}
-                  </div>
+                          <Input
+                            placeholder="new suffix, e.g. 09"
+                            className="h-7 w-32 text-xs"
+                            value={sectionForms[co.id] ?? ""}
+                            onChange={(e) =>
+                              setSectionForms((prev) => ({ ...prev, [co.id]: e.target.value }))
+                            }
+                          />
+                          <Button type="submit" variant="outline" size="sm" className="h-7 text-xs">
+                            <Plus className="size-3" />
+                            Add section
+                          </Button>
+                        </form>
+                      )}
+                    </CardContent>
+                  </Card>
                 ))}
             </div>
           </div>

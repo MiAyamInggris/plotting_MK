@@ -11,19 +11,16 @@ export default async function RecapPage() {
   ]);
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Recap</h1>
-      <p className="mt-1 text-sm text-slate-600">
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
         Live computed dashboards for the active semester — beban dosen, per-prodi staffing, and
         per-lecturer drill-down.
       </p>
-      <div className="mt-6">
-        <RecapClient
-          programStudi={programStudi}
-          kelompokKeahlian={kelompokKeahlian}
-          canEditTargets={canManageMasterData(user)}
-        />
-      </div>
+      <RecapClient
+        programStudi={programStudi}
+        kelompokKeahlian={kelompokKeahlian}
+        canEditTargets={canManageMasterData(user)}
+      />
     </div>
   );
 }

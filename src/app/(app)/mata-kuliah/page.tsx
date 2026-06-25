@@ -12,20 +12,10 @@ export default async function MataKuliahPage() {
   });
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Mata Kuliah & SKS</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        {user.role === "KAPRODI"
-          ? "Manage courses, SKS, and semester offerings for your Program Studi."
-          : "Manage courses, SKS, and semester offerings for any Program Studi."}
-      </p>
-      <div className="mt-6">
-        <MataKuliahClient
-          role={user.role}
-          userProdiId={user.prodiId ?? null}
-          programStudi={programStudi}
-        />
-      </div>
-    </div>
+    <MataKuliahClient
+      role={user.role}
+      userProdiId={user.prodiId ?? null}
+      programStudi={programStudi}
+    />
   );
 }

@@ -1,6 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Users } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { EmptyState } from "@/components/EmptyState";
+import { TableSkeleton } from "@/components/TableSkeleton";
 
 type ProgramStudi = { id: string; kode: string; nama: string };
 type KelompokKeahlian = { id: string; nama: string };
@@ -19,6 +33,8 @@ type Row = {
   sksPerProdi: Record<string, number>;
 };
 
+const ALL = "__all__";
+
 export default function BebanDosenTab({
   programStudi,
   kelompokKeahlian,
@@ -26,25 +42,25 @@ export default function BebanDosenTab({
   programStudi: ProgramStudi[];
   kelompokKeahlian: KelompokKeahlian[];
 }) {
-  const [kkId, setKkId] = useState("");
-  const [homebaseProdiId, setHomebaseProdiId] = useState("");
+  const [kkId, setKkId] = useState(ALL);
+  const [homebaseProdiId, setHomebaseProdiId] = useState(ALL);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const params = new URLSearchParams();
-      if (kkId) params.set("kkId", kkId);
-      if (homebaseProdiId) params.set("homebaseProdiId", homebaseProdiId);
+      if (kkId !== ALL) params.set("kkId", kkId);
+      if (homebaseProdiId !== ALL) params.set("homebaseProdiId", homebaseProdiId);
       const res = await fetch(`/api/recap/beban-dosen?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
       setRows(data.dosen);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setLoadError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
@@ -56,82 +72,82 @@ export default function BebanDosenTab({
   }, [kkId, homebaseProdiId]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">KK</label>
-          <select
-            value={kkId}
-            onChange={(e) => setKkId(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All</option>
-            {kelompokKeahlian.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.nama}
-              </option>
-            ))}
-          </select>
+    <Card>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">KK</Label>
+            <Select value={kkId} onValueChange={setKkId}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All</SelectItem>
+                {kelompokKeahlian.map((k) => (
+                  <SelectItem key={k.id} value={k.id}>{k.nama}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Homebase Prodi</Label>
+            <Select value={homebaseProdiId} onValueChange={setHomebaseProdiId}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All</SelectItem>
+                {programStudi.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.kode}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Homebase Prodi</label>
-          <select
-            value={homebaseProdiId}
-            onChange={(e) => setHomebaseProdiId(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All</option>
-            {programStudi.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.kode}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+        {loadError && (
+          <Alert variant="destructive">
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
+        )}
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-3 py-2">Kode</th>
-              <th className="px-3 py-2">Nama</th>
-              <th className="px-3 py-2">JFA</th>
-              <th className="px-3 py-2">KK</th>
-              <th className="px-3 py-2">Homebase</th>
-              <th className="px-3 py-2">Beban Struktural</th>
-              <th className="px-3 py-2">Total SKS</th>
-              <th className="px-3 py-2">Kelas</th>
-              <th className="px-3 py-2">MK</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="sticky top-0 bg-card">Kode</TableHead>
+              <TableHead className="sticky top-0 bg-card">Nama</TableHead>
+              <TableHead className="sticky top-0 bg-card">JFA</TableHead>
+              <TableHead className="sticky top-0 bg-card">KK</TableHead>
+              <TableHead className="sticky top-0 bg-card">Homebase</TableHead>
+              <TableHead className="sticky top-0 bg-card">Beban Struktural</TableHead>
+              <TableHead className="sticky top-0 bg-card text-right">Total SKS</TableHead>
+              <TableHead className="sticky top-0 bg-card text-right">Kelas</TableHead>
+              <TableHead className="sticky top-0 bg-card text-right">MK</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading ? (
-              <tr>
-                <td colSpan={9} className="px-4 py-4 text-center text-slate-500">
-                  Loading…
-                </td>
-              </tr>
+              <TableSkeleton columns={9} />
+            ) : rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9}>
+                  <EmptyState icon={Users} title="No dosen found" />
+                </TableCell>
+              </TableRow>
             ) : (
               rows.map((r) => (
-                <tr key={r.id} className="border-t border-slate-100">
-                  <td className="px-3 py-2 font-medium">{r.kode}</td>
-                  <td className="px-3 py-2">{r.nama}</td>
-                  <td className="px-3 py-2">{r.jfa ?? "—"}</td>
-                  <td className="px-3 py-2">{r.kk ?? "—"}</td>
-                  <td className="px-3 py-2">{r.homebaseProdi ?? "—"}</td>
-                  <td className="px-3 py-2">{r.bebanStruktural ?? "—"}</td>
-                  <td className="px-3 py-2">{r.totalSksPengajaran}</td>
-                  <td className="px-3 py-2">{r.jumlahKelas}</td>
-                  <td className="px-3 py-2">{r.jumlahMK}</td>
-                </tr>
+                <TableRow key={r.id} className="h-12">
+                  <TableCell className="font-medium">{r.kode}</TableCell>
+                  <TableCell>{r.nama}</TableCell>
+                  <TableCell>{r.jfa ?? "—"}</TableCell>
+                  <TableCell>{r.kk ?? "—"}</TableCell>
+                  <TableCell>{r.homebaseProdi ?? "—"}</TableCell>
+                  <TableCell>{r.bebanStruktural ?? "—"}</TableCell>
+                  <TableCell className="text-right">{r.totalSksPengajaran}</TableCell>
+                  <TableCell className="text-right">{r.jumlahKelas}</TableCell>
+                  <TableCell className="text-right">{r.jumlahMK}</TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

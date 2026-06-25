@@ -7,12 +7,5 @@ export default async function ProgramStudiPage() {
   const user = await getSessionUser();
   if (!canManageMasterData(user)) redirect("/");
 
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Program Studi</h1>
-      <div className="mt-6">
-        <ProgramStudiClient />
-      </div>
-    </div>
-  );
+  return <ProgramStudiClient />;
 }
