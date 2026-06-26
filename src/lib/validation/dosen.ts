@@ -19,6 +19,12 @@ export const createDosenSchema = z.object({
     .transform((v) => v.toUpperCase()),
   nama: z.string().min(1),
   namaTanpaGelar: z.string().min(1),
+  email: z
+    .string()
+    .email()
+    .transform((v) => v.toLowerCase())
+    .nullable()
+    .optional(),
   nipYpt: z.string().nullable().optional(),
   nidn: z.string().nullable().optional(),
   jfa: jfaSchema.nullable().optional(),

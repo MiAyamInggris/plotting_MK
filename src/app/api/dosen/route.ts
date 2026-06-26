@@ -26,6 +26,7 @@ export async function GET(request: Request) {
       { kode: { contains: search, mode: "insensitive" } },
       { nama: { contains: search, mode: "insensitive" } },
       { namaTanpaGelar: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
     ];
   }
   if (kkId) where.kkId = kkId;
@@ -44,6 +45,7 @@ export async function GET(request: Request) {
       homebaseProdi: { select: { kode: true, nama: true } },
       kk: { select: { nama: true } },
       coe: { select: { nama: true } },
+      user: { select: { id: true, role: true, prodiId: true, kkId: true, aktif: true } },
     },
   });
 
@@ -67,6 +69,15 @@ export async function POST(request: Request) {
   });
   if (existing) {
     return NextResponse.json({ error: "Kode dosen already in use" }, { status: 409 });
+  }
+
+  if (parsed.data.email) {
+    const existingEmail = await prisma.dosen.findUnique({
+      where: { email: parsed.data.email },
+    });
+    if (existingEmail) {
+      return NextResponse.json({ error: "Email already in use by another dosen" }, { status: 409 });
+    }
   }
 
   const { tmtJfa, ...rest } = parsed.data;

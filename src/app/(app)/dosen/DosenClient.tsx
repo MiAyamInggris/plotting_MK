@@ -38,6 +38,7 @@ type Dosen = {
   kode: string;
   nama: string;
   namaTanpaGelar: string;
+  email: string | null;
   nipYpt: string | null;
   nidn: string | null;
   jfa: string | null;
@@ -79,6 +80,7 @@ type FormState = {
   kode: string;
   nama: string;
   namaTanpaGelar: string;
+  email: string;
   nipYpt: string;
   nidn: string;
   jfa: string;
@@ -94,6 +96,7 @@ const EMPTY_FORM: FormState = {
   kode: "",
   nama: "",
   namaTanpaGelar: "",
+  email: "",
   nipYpt: "",
   nidn: "",
   jfa: "",
@@ -110,6 +113,7 @@ function toPayload(f: FormState) {
     kode: f.kode,
     nama: f.nama,
     namaTanpaGelar: f.namaTanpaGelar,
+    email: f.email || null,
     nipYpt: f.nipYpt || null,
     nidn: f.nidn || null,
     jfa: f.jfa || null,
@@ -169,6 +173,15 @@ function DosenFields({
           required
           value={value.namaTanpaGelar}
           onChange={(e) => set("namaTanpaGelar", e.target.value)}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-email`}>Email</Label>
+        <Input
+          id={`${idPrefix}-email`}
+          type="email"
+          value={value.email}
+          onChange={(e) => set("email", e.target.value)}
         />
       </div>
       <div className="space-y-1.5">
@@ -402,6 +415,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
       kode: d.kode,
       nama: d.nama,
       namaTanpaGelar: d.namaTanpaGelar,
+      email: d.email ?? "",
       nipYpt: d.nipYpt ?? "",
       nidn: d.nidn ?? "",
       jfa: d.jfa ?? "",
@@ -471,7 +485,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
     }
   }
 
-  const columnCount = canEdit ? 10 : 9;
+  const columnCount = canEdit ? 11 : 10;
 
   return (
     <Card>
@@ -536,7 +550,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
                 <Search className="size-4" />
               </InputGroupAddon>
               <InputGroupInput
-                placeholder="kode or nama"
+                placeholder="kode, nama, or email"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -659,6 +673,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
             <TableRow>
               <TableHead className="sticky top-0 bg-card">Kode</TableHead>
               <TableHead className="sticky top-0 bg-card">Nama</TableHead>
+              <TableHead className="sticky top-0 bg-card">Email</TableHead>
               <TableHead className="sticky top-0 bg-card">NIP/NIDN</TableHead>
               <TableHead className="sticky top-0 bg-card">JFA</TableHead>
               <TableHead className="sticky top-0 bg-card">Homebase</TableHead>
@@ -685,6 +700,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
                 <TableRow key={d.id} className="h-12">
                   <TableCell className="font-medium">{d.kode}</TableCell>
                   <TableCell>{d.nama}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{d.email ?? "—"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {d.nipYpt ?? "—"} / {d.nidn ?? "—"}
                   </TableCell>

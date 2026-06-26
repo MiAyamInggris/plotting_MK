@@ -20,6 +20,15 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  if (parsed.data.email) {
+    const existingEmail = await prisma.dosen.findUnique({
+      where: { email: parsed.data.email },
+    });
+    if (existingEmail && existingEmail.id !== id) {
+      return NextResponse.json({ error: "Email already in use by another dosen" }, { status: 409 });
+    }
+  }
+
   const { tmtJfa, ...rest } = parsed.data;
   const updated = await prisma.dosen.update({
     where: { id },
