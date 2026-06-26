@@ -16,6 +16,9 @@ export async function GET(request: Request) {
   }
   const { semester } = semesterResult;
 
+  // Intentionally no join/filter on Dosen or kkId here: a prodi must be
+  // listed purely because it has opened classes, regardless of plotting
+  // state or which KK might eventually staff them.
   const kelasList = await prisma.kelas.findMany({
     where: { semesterPeriodeId: semester.id },
     select: {
@@ -23,7 +26,6 @@ export async function GET(request: Request) {
       dosenId: true,
       courseOffering: {
         select: {
-          mataKuliahId: true,
           prodi: { select: { id: true, kode: true, nama: true } },
         },
       },
@@ -33,31 +35,30 @@ export async function GET(request: Request) {
   type Aggregate = {
     kode: string;
     nama: string;
+    totalKelas: number;
+    plottedKelas: number;
+    unplottedKelas: number;
     unplottedSks: number;
-    unplottedMataKuliahIds: Set<string>;
   };
   const byProdi = new Map<string, Aggregate>();
   for (const k of kelasList) {
     const prodi = k.courseOffering.prodi;
     let agg = byProdi.get(prodi.id);
     if (!agg) {
-      agg = { kode: prodi.kode, nama: prodi.nama, unplottedSks: 0, unplottedMataKuliahIds: new Set() };
+      agg = { kode: prodi.kode, nama: prodi.nama, totalKelas: 0, plottedKelas: 0, unplottedKelas: 0, unplottedSks: 0 };
       byProdi.set(prodi.id, agg);
     }
-    if (!k.dosenId) {
+    agg.totalKelas += 1;
+    if (k.dosenId) {
+      agg.plottedKelas += 1;
+    } else {
+      agg.unplottedKelas += 1;
       agg.unplottedSks += k.sks;
-      agg.unplottedMataKuliahIds.add(k.courseOffering.mataKuliahId);
     }
   }
 
   const summary = [...byProdi.entries()]
-    .map(([prodiId, agg]) => ({
-      prodiId,
-      kode: agg.kode,
-      nama: agg.nama,
-      unplottedMataKuliah: agg.unplottedMataKuliahIds.size,
-      unplottedSks: agg.unplottedSks,
-    }))
+    .map(([prodiId, agg]) => ({ prodiId, ...agg }))
     .sort((a, b) => a.kode.localeCompare(b.kode));
 
   return NextResponse.json({ summary });

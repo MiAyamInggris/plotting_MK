@@ -21,6 +21,14 @@ export async function GET(request: Request) {
   }
   const { semester } = semesterResult;
 
+  const prodi = await prisma.programStudi.findUnique({
+    where: { id: prodiId },
+    select: { id: true, kode: true, nama: true },
+  });
+  if (!prodi) {
+    return NextResponse.json({ error: "Program Studi not found" }, { status: 404 });
+  }
+
   const mataKuliah = await prisma.mataKuliah.findMany({
     where: { prodiId },
     orderBy: [{ kodeMK: "asc" }],
@@ -43,5 +51,5 @@ export async function GET(request: Request) {
     },
   });
 
-  return NextResponse.json({ mataKuliah, activePeriode: semester, canWrite: semesterResult.canWrite });
+  return NextResponse.json({ prodi, mataKuliah, activePeriode: semester, canWrite: semesterResult.canWrite });
 }

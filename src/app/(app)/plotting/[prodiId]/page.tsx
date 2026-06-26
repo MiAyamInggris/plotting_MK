@@ -1,7 +1,12 @@
 import { getSessionUser } from "@/lib/session";
-import ProdiListClient from "./ProdiListClient";
+import MataKuliahListClient from "./MataKuliahListClient";
 
-export default async function PlottingPage() {
+export default async function ProdiPlottingPage({
+  params,
+}: {
+  params: Promise<{ prodiId: string }>;
+}) {
+  const { prodiId } = await params;
   const user = await getSessionUser();
   const canEdit = !!user && (user.role === "ADMIN" || user.role === "KETUA_KK");
 
@@ -9,10 +14,10 @@ export default async function PlottingPage() {
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
         {canEdit
-          ? "Choose a Program Studi to see and plot its unfinished classes."
+          ? "Choose a Mata Kuliah to assign or change its dosen."
           : "Read-only view of the current plotting."}
       </p>
-      <ProdiListClient />
+      <MataKuliahListClient prodiId={prodiId} />
     </div>
   );
 }
