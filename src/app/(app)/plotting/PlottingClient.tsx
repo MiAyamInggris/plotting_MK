@@ -15,12 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useSemester } from "@/components/SemesterContext";
 import { cn } from "@/lib/utils";
-import DosenPicker, { type DosenOption } from "./DosenPicker";
+import DosenPicker, { type AssignContext, type DosenOption } from "./DosenPicker";
 
 type Dosen = { id: string; kode: string; nama: string; kkId: string | null; aktif: boolean };
 type Kelas = {
@@ -30,6 +31,7 @@ type Kelas = {
   sks: number;
   dosenId: string | null;
   dosen: Dosen | null;
+  assignedBy: { name: string } | null;
 };
 type CourseOffering = {
   id: string;
@@ -46,7 +48,13 @@ type MataKuliahRow = {
   ket: string | null;
   courseOfferings: CourseOffering[];
 };
-type ProgramStudi = { id: string; kode: string; nama: string };
+type ProdiSummary = {
+  prodiId: string;
+  kode: string;
+  nama: string;
+  unplottedMataKuliah: number;
+  unplottedSks: number;
+};
 type RuleWarning = { level: "error" | "warning"; code: string; message: string };
 
 function SectionChip({
@@ -54,18 +62,26 @@ function SectionChip({
   canEdit,
   canManageSections,
   dosenOptions,
+  context,
+  semesterId,
+  canRegisterDlb,
   onAssign,
   onClear,
   onRemove,
+  onDlbRegistered,
   saving,
 }: {
   kelas: Kelas;
   canEdit: boolean;
   canManageSections: boolean;
   dosenOptions: DosenOption[];
+  context: AssignContext;
+  semesterId: string;
+  canRegisterDlb: boolean;
   onAssign: (dosenId: string) => void;
   onClear: () => void;
   onRemove: () => void;
+  onDlbRegistered: (dosen: DosenOption) => void;
   saving: boolean;
 }) {
   return (
@@ -75,12 +91,21 @@ function SectionChip({
         {kelas.dosen ? `${kelas.dosen.kode} — ${kelas.dosen.nama}` : "unassigned"}
       </span>
       <span className="text-muted-foreground">({kelas.sks} sks)</span>
+      <Badge variant={kelas.dosen ? "default" : "secondary"} className="text-[10px]">
+        {kelas.dosen
+          ? `Sudah di-plotting${kelas.assignedBy ? ` · ${kelas.assignedBy.name}` : ""}`
+          : "Belum di-plotting"}
+      </Badge>
 
       {canEdit && (
         <>
           <DosenPicker
             options={dosenOptions}
+            context={context}
+            semesterId={semesterId}
+            canRegisterDlb={canRegisterDlb}
             onSelect={onAssign}
+            onDlbRegistered={onDlbRegistered}
             trigger={
               <Button variant="outline" size="sm" className="h-6 px-1.5 text-xs" disabled={saving}>
                 {saving ? "…" : "Change"}
@@ -122,22 +147,20 @@ function SectionChip({
 }
 
 export default function PlottingClient({
-  programStudi,
   defaultProdiId,
   canEdit,
   canManageSections,
-  dosenOptions,
+  canRegisterDlb,
 }: {
-  programStudi: ProgramStudi[];
   defaultProdiId: string | null;
   canEdit: boolean;
   canManageSections: boolean;
-  dosenOptions: DosenOption[];
+  canRegisterDlb: boolean;
 }) {
   const { semesterId } = useSemester();
-  const [selectedProdiId, setSelectedProdiId] = useState(
-    defaultProdiId ?? programStudi[0]?.id ?? "",
-  );
+  const [prodiSummary, setProdiSummary] = useState<ProdiSummary[]>([]);
+  const [selectedProdiId, setSelectedProdiId] = useState(defaultProdiId ?? "");
+  const [dosenOptions, setDosenOptions] = useState<DosenOption[]>([]);
   const [mataKuliah, setMataKuliah] = useState<MataKuliahRow[]>([]);
   const [semesterWritable, setSemesterWritable] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -145,6 +168,37 @@ export default function PlottingClient({
   const [savingKelasId, setSavingKelasId] = useState<string | null>(null);
   const [warningsByKelas, setWarningsByKelas] = useState<Record<string, RuleWarning[]>>({});
   const [sectionForms, setSectionForms] = useState<Record<string, string>>({});
+
+  async function loadSummary() {
+    if (!semesterId) return;
+    try {
+      const res = await fetch(`/api/plotting/summary?semesterPeriodeId=${semesterId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setProdiSummary(data.summary);
+      setSelectedProdiId((prev) =>
+        prev && data.summary.some((p: ProdiSummary) => p.prodiId === prev)
+          ? prev
+          : (defaultProdiId && data.summary.some((p: ProdiSummary) => p.prodiId === defaultProdiId)
+              ? defaultProdiId
+              : data.summary[0]?.prodiId ?? ""),
+      );
+    } catch {
+      // non-fatal — the board still works without the summary annotations
+    }
+  }
+
+  async function loadDosenOptions() {
+    if (!semesterId) return;
+    try {
+      const res = await fetch(`/api/plotting/dosen-options?semesterPeriodeId=${semesterId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setDosenOptions(data.dosen);
+    } catch {
+      // non-fatal
+    }
+  }
 
   async function load() {
     if (!selectedProdiId || !semesterId) return;
@@ -166,12 +220,20 @@ export default function PlottingClient({
   }
 
   useEffect(() => {
+    loadSummary();
+    loadDosenOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [semesterId]);
+
+  useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProdiId, semesterId]);
 
   const effectiveCanEdit = canEdit && semesterWritable;
   const effectiveCanManageSections = canManageSections && semesterWritable;
+
+  const selectedSummary = prodiSummary.find((p) => p.prodiId === selectedProdiId) ?? null;
 
   const blocks = useMemo(() => {
     const map = new Map<
@@ -192,6 +254,10 @@ export default function PlottingClient({
     );
   }, [mataKuliah]);
 
+  function addDlbOption(dosen: DosenOption) {
+    setDosenOptions((prev) => [...prev, dosen].sort((a, b) => a.kode.localeCompare(b.kode)));
+  }
+
   async function assignDosen(kelasId: string, dosenId: string) {
     setSavingKelasId(kelasId);
     try {
@@ -204,7 +270,7 @@ export default function PlottingClient({
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to assign");
       setWarningsByKelas((prev) => ({ ...prev, [kelasId]: data.warnings ?? [] }));
       toast.success("Dosen assigned");
-      await load();
+      await Promise.all([load(), loadSummary(), loadDosenOptions()]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to assign dosen");
     } finally {
@@ -224,7 +290,7 @@ export default function PlottingClient({
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to clear");
       setWarningsByKelas((prev) => ({ ...prev, [kelasId]: [] }));
       toast.success("Dosen cleared");
-      await load();
+      await Promise.all([load(), loadSummary(), loadDosenOptions()]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to clear dosen");
     } finally {
@@ -241,7 +307,7 @@ export default function PlottingClient({
         throw new Error(typeof data.error === "string" ? data.error : "Failed to remove section");
       }
       toast.success("Section removed");
-      await load();
+      await Promise.all([load(), loadSummary()]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to remove section");
     } finally {
@@ -265,7 +331,7 @@ export default function PlottingClient({
       }
       setSectionForms((prev) => ({ ...prev, [courseOfferingId]: "" }));
       toast.success("Section added");
-      await load();
+      await Promise.all([load(), loadSummary()]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to add section");
     }
@@ -277,20 +343,25 @@ export default function PlottingClient({
     <div className="space-y-6">
       <Card>
         <CardContent>
-          <div className="max-w-sm space-y-1.5">
+          <div className="max-w-md space-y-1.5">
             <Label className="text-xs text-muted-foreground">Program Studi</Label>
             <Select value={selectedProdiId} onValueChange={setSelectedProdiId}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {programStudi.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.kode} — {p.nama}
+                {prodiSummary.map((p) => (
+                  <SelectItem key={p.prodiId} value={p.prodiId}>
+                    {p.kode} — {p.nama} — {p.unplottedMataKuliah} MK / {p.unplottedSks} SKS belum di-plotting
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {selectedSummary && (
+              <p className="text-xs text-muted-foreground">
+                {selectedSummary.unplottedMataKuliah} MK / {selectedSummary.unplottedSks} SKS belum di-plotting
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -357,9 +428,20 @@ export default function PlottingClient({
                             canEdit={effectiveCanEdit}
                             canManageSections={effectiveCanManageSections}
                             dosenOptions={dosenOptions}
+                            semesterId={semesterId}
+                            canRegisterDlb={canRegisterDlb}
+                            context={{
+                              prodiKode: selectedSummary?.kode ?? "",
+                              prodiNama: selectedSummary?.nama ?? "",
+                              kodeMK: mk.kodeMK,
+                              mkNama: mk.nama,
+                              kodeKelas: k.kodeKelas,
+                              sks: k.sks,
+                            }}
                             onAssign={(dosenId) => assignDosen(k.id, dosenId)}
                             onClear={() => clearDosen(k.id)}
                             onRemove={() => removeSection(k.id)}
+                            onDlbRegistered={addDlbOption}
                             saving={savingKelasId === k.id}
                           />
                         ))}

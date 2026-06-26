@@ -11,6 +11,19 @@ export const jfaSchema = z.enum([
 
 export const tingkatPendidikanSchema = z.enum(["S2", "S3", "ON_GOING_S3"]);
 
+export const dosenJenisSchema = z.enum(["TETAP", "DLB"]);
+
+export const registerDlbSchema = z.object({
+  nama: z.string().min(1),
+  email: z
+    .string()
+    .email()
+    .transform((v) => v.toLowerCase())
+    .nullable()
+    .optional(),
+  kkId: z.string().nullable().optional(),
+});
+
 export const createDosenSchema = z.object({
   kode: z
     .string()
@@ -34,6 +47,7 @@ export const createDosenSchema = z.object({
   kkId: z.string().nullable().optional(),
   coeId: z.string().nullable().optional(),
   bebanStruktural: z.string().nullable().optional(),
+  jenis: dosenJenisSchema.optional(),
 });
 
 export const updateDosenSchema = createDosenSchema.partial().extend({

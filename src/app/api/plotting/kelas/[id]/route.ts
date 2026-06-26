@@ -72,8 +72,15 @@ export async function PATCH(
 
   const updated = await prisma.kelas.update({
     where: { id },
-    data: { dosenId: dosen?.id ?? null },
-    include: { dosen: { select: { id: true, kode: true, nama: true, kkId: true, aktif: true } } },
+    data: {
+      dosenId: dosen?.id ?? null,
+      assignedById: dosen ? user!.id : null,
+      assignedAt: dosen ? new Date() : null,
+    },
+    include: {
+      dosen: { select: { id: true, kode: true, nama: true, kkId: true, aktif: true } },
+      assignedBy: { select: { name: true } },
+    },
   });
 
   return NextResponse.json({ kelas: updated, warnings });

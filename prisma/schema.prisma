@@ -31,6 +31,11 @@ enum TingkatPendidikan {
   ON_GOING_S3
 }
 
+enum DosenJenis {
+  TETAP
+  DLB
+}
+
 model ProgramStudi {
   id      String  @id @default(cuid())
   kode    String  @unique
@@ -95,6 +100,11 @@ model Dosen {
   coe               CenterOfExcellence? @relation(fields: [coeId], references: [id])
   bebanStruktural   String?
   aktif             Boolean            @default(true)
+  jenis             DosenJenis         @default(TETAP)
+  // Who self-registered this dosen as a DLB (Part of Refinement 05). Null for
+  // the existing/imported permanent roster and for dosen created by Admin.
+  createdById       String?
+  createdBy         User?              @relation("DosenRegisteredBy", fields: [createdById], references: [id])
 
   kelas Kelas[]
   user  User?
@@ -198,6 +208,12 @@ model Kelas {
   sks               Float
   dosenId           String?
   dosen             Dosen?          @relation(fields: [dosenId], references: [id])
+  // Who plotted the current dosenId and when (Refinement 05). Both cleared
+  // back to null whenever dosenId is cleared — they track the *current*
+  // assignment's author, not a permanent history.
+  assignedById      String?
+  assignedBy        User?           @relation("KelasAssignedBy", fields: [assignedById], references: [id])
+  assignedAt        DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -230,6 +246,9 @@ model User {
   aktif              Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+
+  registeredDlb Dosen[] @relation("DosenRegisteredBy")
+  assignedKelas Kelas[] @relation("KelasAssignedBy")
 
   @@index([prodiId])
   @@index([kkId])

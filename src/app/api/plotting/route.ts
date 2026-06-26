@@ -35,6 +35,7 @@ export async function GET(request: Request) {
               dosen: {
                 select: { id: true, kode: true, nama: true, kkId: true, aktif: true },
               },
+              assignedBy: { select: { name: true } },
             },
           },
         },

@@ -32,12 +32,14 @@ import { TableSkeleton } from "@/components/TableSkeleton";
 import { StatusBadge } from "@/components/StatusBadge";
 
 type TingkatPendidikan = "S2" | "S3" | "ON_GOING_S3";
+type DosenJenis = "TETAP" | "DLB";
 
 type Dosen = {
   id: string;
   kode: string;
   nama: string;
   namaTanpaGelar: string;
+  jenis: DosenJenis;
   email: string | null;
   nipYpt: string | null;
   nidn: string | null;
@@ -68,6 +70,7 @@ const JFA_OPTIONS = [
 ];
 
 const TINGKAT_OPTIONS: TingkatPendidikan[] = ["S2", "S3", "ON_GOING_S3"];
+const JENIS_OPTIONS: DosenJenis[] = ["TETAP", "DLB"];
 const ALL = "__all__";
 const NONE = "__none__";
 
@@ -80,6 +83,7 @@ type FormState = {
   kode: string;
   nama: string;
   namaTanpaGelar: string;
+  jenis: DosenJenis;
   email: string;
   nipYpt: string;
   nidn: string;
@@ -96,6 +100,7 @@ const EMPTY_FORM: FormState = {
   kode: "",
   nama: "",
   namaTanpaGelar: "",
+  jenis: "TETAP",
   email: "",
   nipYpt: "",
   nidn: "",
@@ -113,6 +118,7 @@ function toPayload(f: FormState) {
     kode: f.kode,
     nama: f.nama,
     namaTanpaGelar: f.namaTanpaGelar,
+    jenis: f.jenis,
     email: f.email || null,
     nipYpt: f.nipYpt || null,
     nidn: f.nidn || null,
@@ -183,6 +189,21 @@ function DosenFields({
           value={value.email}
           onChange={(e) => set("email", e.target.value)}
         />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-jenis`}>Jenis</Label>
+        <Select value={value.jenis} onValueChange={(v) => set("jenis", v as DosenJenis)}>
+          <SelectTrigger id={`${idPrefix}-jenis`} className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {JENIS_OPTIONS.map((opt) => (
+              <SelectItem key={opt} value={opt}>
+                {opt}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor={`${idPrefix}-nip`}>NIP YPT</Label>
@@ -415,6 +436,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
       kode: d.kode,
       nama: d.nama,
       namaTanpaGelar: d.namaTanpaGelar,
+      jenis: d.jenis,
       email: d.email ?? "",
       nipYpt: d.nipYpt ?? "",
       nidn: d.nidn ?? "",
@@ -485,7 +507,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
     }
   }
 
-  const columnCount = canEdit ? 11 : 10;
+  const columnCount = canEdit ? 12 : 11;
 
   return (
     <Card>
@@ -673,6 +695,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
             <TableRow>
               <TableHead className="sticky top-0 bg-card">Kode</TableHead>
               <TableHead className="sticky top-0 bg-card">Nama</TableHead>
+              <TableHead className="sticky top-0 bg-card">Jenis</TableHead>
               <TableHead className="sticky top-0 bg-card">Email</TableHead>
               <TableHead className="sticky top-0 bg-card">NIP/NIDN</TableHead>
               <TableHead className="sticky top-0 bg-card">JFA</TableHead>
@@ -700,6 +723,9 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
                 <TableRow key={d.id} className="h-12">
                   <TableCell className="font-medium">{d.kode}</TableCell>
                   <TableCell>{d.nama}</TableCell>
+                  <TableCell>
+                    <Badge variant={d.jenis === "DLB" ? "outline" : "secondary"}>{d.jenis}</Badge>
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{d.email ?? "—"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {d.nipYpt ?? "—"} / {d.nidn ?? "—"}
