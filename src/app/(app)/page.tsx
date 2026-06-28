@@ -1,6 +1,16 @@
+import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
+import { getSessionUser } from "@/lib/session";
+import KaprodiDashboard from "./KaprodiDashboard";
+import KetuaKkDashboard from "./KetuaKkDashboard";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
+  if (user.role === "KAPRODI") return <KaprodiDashboard />;
+  if (user.role === "KETUA_KK") return <KetuaKkDashboard />;
+
   return (
     <Card>
       <CardContent>
