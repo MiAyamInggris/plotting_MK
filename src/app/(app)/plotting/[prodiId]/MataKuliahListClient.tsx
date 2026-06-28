@@ -40,7 +40,7 @@ export default function MataKuliahListClient({ prodiId }: { prodiId: string }) {
     if (!semesterId) return;
     setLoading(true);
     setLoadError(null);
-    fetch(`/api/plotting?prodiId=${prodiId}&semesterPeriodeId=${semesterId}`)
+    fetch(`/api/plotting?prodiId=${prodiId}&semesterPeriodeId=${semesterId}&onlyOpened=true`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load plotting data");
         return res.json();

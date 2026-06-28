@@ -144,7 +144,7 @@ export default function ClassAssignmentClient({
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`/api/plotting?prodiId=${prodiId}&semesterPeriodeId=${semesterId}`);
+      const res = await fetch(`/api/plotting?prodiId=${prodiId}&semesterPeriodeId=${semesterId}&onlyOpened=true`);
       if (!res.ok) throw new Error("Failed to load plotting data");
       const data = await res.json();
       setProdi(data.prodi);
