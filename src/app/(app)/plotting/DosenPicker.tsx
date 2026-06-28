@@ -13,12 +13,11 @@ import {
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DEFAULT_SKS_CAP } from "@/lib/config";
 import { cn } from "@/lib/utils";
 import type { DosenLoadBreakdown } from "@/lib/bebanDosen";
+import RegisterDlbDialog from "./RegisterDlbDialog";
 
 export type DosenOption = {
   id: string;
@@ -109,142 +108,89 @@ export default function DosenPicker({
   onDlbRegistered: (dosen: DosenOption) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [registering, setRegistering] = useState(false);
-  const [registerNama, setRegisterNama] = useState("");
-  const [registerEmail, setRegisterEmail] = useState("");
-  const [registerError, setRegisterError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function submitDlb() {
-    if (!registerNama.trim()) return;
-    setSubmitting(true);
-    setRegisterError(null);
-    try {
-      const res = await fetch("/api/dosen/register-dlb", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nama: registerNama.trim(), email: registerEmail.trim() || null }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to register DLB");
-      onDlbRegistered({ ...data.dosen, totalSks: 0 });
-      onSelect(data.dosen.id);
-      setOpen(false);
-      setRegistering(false);
-      setRegisterNama("");
-      setRegisterEmail("");
-    } catch (e) {
-      setRegisterError(e instanceof Error ? e.message : "Failed to register DLB");
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const [dlbDialogOpen, setDlbDialogOpen] = useState(false);
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) {
-          setRegistering(false);
-          setRegisterError(null);
-        }
-      }}
-    >
-      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
-        <div className="border-b border-border px-3 py-2 text-xs text-muted-foreground">
-          {context.prodiKode} — {context.prodiNama} → {context.kodeMK} — {context.mkNama} →{" "}
-          {context.kodeKelas} → {context.sks} sks
-        </div>
-
-        {registering ? (
-          <div className="space-y-3 p-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="dlb-nama">Nama</Label>
-              <Input id="dlb-nama" value={registerNama} onChange={(e) => setRegisterNama(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="dlb-email">Email (optional)</Label>
-              <Input
-                id="dlb-email"
-                type="email"
-                value={registerEmail}
-                onChange={(e) => setRegisterEmail(e.target.value)}
-              />
-            </div>
-            {registerError && <p className="text-sm text-destructive">{registerError}</p>}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setRegistering(false)}>
-                Cancel
-              </Button>
-              <Button type="button" size="sm" disabled={submitting} onClick={submitDlb}>
-                {submitting ? "Registering…" : "Register & assign"}
-              </Button>
-            </div>
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+        <PopoverContent className="w-80 p-0" align="start">
+          <div className="border-b border-border px-3 py-2 text-xs text-muted-foreground">
+            {context.prodiKode} — {context.prodiNama} → {context.kodeMK} — {context.mkNama} →{" "}
+            {context.kodeKelas} → {context.sks} sks
           </div>
-        ) : (
-          <>
-            <Command>
-              <CommandInput placeholder="Search kode or nama…" />
-              <CommandList>
-                <CommandEmpty>{optionsLoading ? "Loading dosen…" : "No matching dosen"}</CommandEmpty>
-                <CommandGroup>
-                  {options.map((d) => {
-                    const projected = d.totalSks + context.sks;
-                    const overCap = projected > DEFAULT_SKS_CAP;
-                    return (
-                      <CommandItem
-                        key={d.id}
-                        value={`${d.kode} ${d.nama}`}
-                        onSelect={() => {
-                          onSelect(d.id);
-                          setOpen(false);
-                        }}
-                        className="flex items-center justify-between gap-2"
-                      >
-                        <span className="flex items-center gap-1.5 truncate">
-                          <span className="font-medium">{d.kode}</span> — {d.nama}
-                          {d.jenis === "DLB" && (
-                            <Badge variant="outline" className="text-[10px]">
-                              DLB
-                            </Badge>
+
+          <Command>
+            <CommandInput placeholder="Search kode or nama…" />
+            <CommandList>
+              <CommandEmpty>{optionsLoading ? "Loading dosen…" : "No matching dosen"}</CommandEmpty>
+              <CommandGroup>
+                {options.map((d) => {
+                  const projected = d.totalSks + context.sks;
+                  const overCap = projected > DEFAULT_SKS_CAP;
+                  return (
+                    <CommandItem
+                      key={d.id}
+                      value={`${d.kode} ${d.nama}`}
+                      onSelect={() => {
+                        onSelect(d.id);
+                        setOpen(false);
+                      }}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <span className="flex items-center gap-1.5 truncate">
+                        <span className="font-medium">{d.kode}</span> — {d.nama}
+                        {d.jenis === "DLB" && (
+                          <Badge variant="outline" className="text-[10px]">
+                            DLB
+                          </Badge>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <span
+                          className={cn(
+                            "text-xs",
+                            overCap ? "font-medium text-amber-600 dark:text-amber-400" : "text-muted-foreground",
                           )}
+                        >
+                          {d.totalSks} → {projected} sks
                         </span>
-                        <span className="flex items-center gap-1.5 shrink-0">
-                          <span
-                            className={cn(
-                              "text-xs",
-                              overCap ? "font-medium text-amber-600 dark:text-amber-400" : "text-muted-foreground",
-                            )}
-                          >
-                            {d.totalSks} → {projected} sks
-                          </span>
-                          <LoadBreakdownTooltip dosenId={d.id} semesterId={semesterId} />
-                        </span>
-                      </CommandItem>
-                    );
-                  })}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-            {canRegisterDlb && (
-              <div className="border-t border-border p-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={() => setRegistering(true)}
-                >
-                  <UserPlus className="size-3.5" />
-                  Register new DLB
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-      </PopoverContent>
-    </Popover>
+                        <LoadBreakdownTooltip dosenId={d.id} semesterId={semesterId} />
+                      </span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          {canRegisterDlb && (
+            <div className="border-t border-border p-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => {
+                  setOpen(false);
+                  setDlbDialogOpen(true);
+                }}
+              >
+                <UserPlus className="size-3.5" />
+                Register new DLB
+              </Button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+
+      <RegisterDlbDialog
+        open={dlbDialogOpen}
+        onOpenChange={setDlbDialogOpen}
+        onRegistered={(dosen) => {
+          onDlbRegistered(dosen);
+          onSelect(dosen.id);
+        }}
+      />
+    </>
   );
 }

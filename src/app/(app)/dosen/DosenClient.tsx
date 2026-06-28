@@ -50,10 +50,14 @@ type Dosen = {
   kkId: string | null;
   coeId: string | null;
   bebanStruktural: string | null;
+  bebanStrukturalSks: number | null;
+  noTelp: string | null;
+  homebaseUniv: string | null;
   aktif: boolean;
   homebaseProdi: { kode: string; nama: string } | null;
   kk: { nama: string } | null;
   coe: { nama: string } | null;
+  createdBy: { name: string } | null;
 };
 
 type ProgramStudi = { id: string; kode: string; nama: string };
@@ -94,6 +98,9 @@ type FormState = {
   kkId: string;
   coeId: string;
   bebanStruktural: string;
+  bebanStrukturalSks: string;
+  noTelp: string;
+  homebaseUniv: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -111,6 +118,9 @@ const EMPTY_FORM: FormState = {
   kkId: "",
   coeId: "",
   bebanStruktural: "",
+  bebanStrukturalSks: "",
+  noTelp: "",
+  homebaseUniv: "",
 };
 
 function toPayload(f: FormState) {
@@ -129,6 +139,9 @@ function toPayload(f: FormState) {
     kkId: f.kkId || null,
     coeId: f.coeId || null,
     bebanStruktural: f.bebanStruktural || null,
+    bebanStrukturalSks: f.bebanStrukturalSks ? Number(f.bebanStrukturalSks) : null,
+    noTelp: f.noTelp || null,
+    homebaseUniv: f.homebaseUniv || null,
   };
 }
 
@@ -324,6 +337,33 @@ function DosenFields({
           onChange={(e) => set("bebanStruktural", e.target.value)}
         />
       </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-beban-sks`}>Beban Struktural (SKS)</Label>
+        <Input
+          id={`${idPrefix}-beban-sks`}
+          type="number"
+          step="0.5"
+          min="0"
+          value={value.bebanStrukturalSks}
+          onChange={(e) => set("bebanStrukturalSks", e.target.value)}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-notelp`}>No. Telp.</Label>
+        <Input
+          id={`${idPrefix}-notelp`}
+          value={value.noTelp}
+          onChange={(e) => set("noTelp", e.target.value)}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-homebase-univ`}>Homebase Univ. (DLB)</Label>
+        <Input
+          id={`${idPrefix}-homebase-univ`}
+          value={value.homebaseUniv}
+          onChange={(e) => set("homebaseUniv", e.target.value)}
+        />
+      </div>
     </div>
   );
 }
@@ -447,6 +487,9 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
       kkId: d.kkId ?? "",
       coeId: d.coeId ?? "",
       bebanStruktural: d.bebanStruktural ?? "",
+      bebanStrukturalSks: d.bebanStrukturalSks != null ? String(d.bebanStrukturalSks) : "",
+      noTelp: d.noTelp ?? "",
+      homebaseUniv: d.homebaseUniv ?? "",
     });
   }
 
@@ -507,7 +550,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
     }
   }
 
-  const columnCount = canEdit ? 12 : 11;
+  const columnCount = canEdit ? 13 : 12;
 
   return (
     <Card>
@@ -696,6 +739,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
               <TableHead className="sticky top-0 bg-card">Kode</TableHead>
               <TableHead className="sticky top-0 bg-card">Nama</TableHead>
               <TableHead className="sticky top-0 bg-card">Jenis</TableHead>
+              <TableHead className="sticky top-0 bg-card">Created By</TableHead>
               <TableHead className="sticky top-0 bg-card">Email</TableHead>
               <TableHead className="sticky top-0 bg-card">NIP/NIDN</TableHead>
               <TableHead className="sticky top-0 bg-card">JFA</TableHead>
@@ -726,6 +770,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
                   <TableCell>
                     <Badge variant={d.jenis === "DLB" ? "outline" : "secondary"}>{d.jenis}</Badge>
                   </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{d.createdBy?.name ?? "—"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{d.email ?? "—"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {d.nipYpt ?? "—"} / {d.nidn ?? "—"}

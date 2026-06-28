@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import { canManageMasterData } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
@@ -5,6 +6,8 @@ import RecapClient from "./RecapClient";
 
 export default async function RecapPage() {
   const user = await getSessionUser();
+  if (!user || user.role === "DOSEN") redirect("/login");
+
   const [programStudi, kelompokKeahlian] = await Promise.all([
     prisma.programStudi.findMany({ orderBy: { kode: "asc" } }),
     prisma.kelompokKeahlian.findMany({ orderBy: { nama: "asc" } }),
@@ -17,6 +20,8 @@ export default async function RecapPage() {
         per-lecturer drill-down.
       </p>
       <RecapClient
+        role={user.role}
+        userProdiId={user.prodiId ?? null}
         programStudi={programStudi}
         kelompokKeahlian={kelompokKeahlian}
         canEditTargets={canManageMasterData(user)}

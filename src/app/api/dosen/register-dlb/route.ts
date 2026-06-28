@@ -4,13 +4,6 @@ import { getSessionUser } from "@/lib/session";
 import { canRegisterDlb } from "@/lib/authz";
 import { registerDlbSchema } from "@/lib/validation/dosen";
 
-function randomKode(): string {
-  const digits = Math.floor(Math.random() * 100000)
-    .toString()
-    .padStart(5, "0");
-  return `DLB${digits}`;
-}
-
 export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!canRegisterDlb(user)) {
@@ -39,34 +32,32 @@ export async function POST(request: Request) {
     kkId = parsed.data.kkId;
   }
 
-  if (parsed.data.email) {
-    const existingEmail = await prisma.dosen.findUnique({ where: { email: parsed.data.email } });
-    if (existingEmail) {
-      return NextResponse.json({ error: "Email already in use by another dosen" }, { status: 409 });
-    }
+  const existingKode = await prisma.dosen.findUnique({ where: { kode: parsed.data.kode } });
+  if (existingKode) {
+    return NextResponse.json({ error: "Kode dosen already in use" }, { status: 409 });
   }
 
-  let created = null;
-  for (let attempt = 0; attempt < 5 && !created; attempt++) {
-    try {
-      created = await prisma.dosen.create({
-        data: {
-          kode: randomKode(),
-          nama: parsed.data.nama,
-          namaTanpaGelar: parsed.data.nama,
-          email: parsed.data.email || null,
-          kkId,
-          jenis: "DLB",
-          createdById: user!.id,
-        },
-        select: { id: true, kode: true, nama: true, kkId: true, aktif: true, jenis: true },
-      });
-    } catch (e) {
-      const isUniqueKodeCollision =
-        typeof e === "object" && e !== null && "code" in e && e.code === "P2002";
-      if (!isUniqueKodeCollision || attempt === 4) throw e;
-    }
+  const existingEmail = await prisma.dosen.findUnique({ where: { email: parsed.data.email } });
+  if (existingEmail) {
+    return NextResponse.json({ error: "Email already in use by another dosen" }, { status: 409 });
   }
+
+  const created = await prisma.dosen.create({
+    data: {
+      kode: parsed.data.kode,
+      nama: parsed.data.nama,
+      namaTanpaGelar: parsed.data.nama,
+      email: parsed.data.email,
+      nidn: parsed.data.nidn,
+      noTelp: parsed.data.noTelp,
+      jfa: parsed.data.jfa,
+      homebaseUniv: parsed.data.homebaseUniv,
+      kkId,
+      jenis: "DLB",
+      createdById: user!.id,
+    },
+    select: { id: true, kode: true, nama: true, kkId: true, aktif: true, jenis: true },
+  });
 
   return NextResponse.json({ dosen: created }, { status: 201 });
 }

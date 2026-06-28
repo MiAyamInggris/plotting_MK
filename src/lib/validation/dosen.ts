@@ -13,14 +13,26 @@ export const tingkatPendidikanSchema = z.enum(["S2", "S3", "ON_GOING_S3"]);
 
 export const dosenJenisSchema = z.enum(["TETAP", "DLB"]);
 
+// DLB (Dosen Luar Biasa) have their own mandatory attribute set, distinct
+// from the tetap-only fields (homebase prodi, NIP YPT) in createDosenSchema
+// below -- they're external, so kode/email/nidn/noTelp/jfa/homebaseUniv are
+// all entered directly by the registering Ketua KK, not inherited from a
+// homebase import.
 export const registerDlbSchema = z.object({
+  kode: z
+    .string()
+    .min(1)
+    .max(10)
+    .transform((v) => v.toUpperCase()),
   nama: z.string().min(1),
   email: z
     .string()
     .email()
-    .transform((v) => v.toLowerCase())
-    .nullable()
-    .optional(),
+    .transform((v) => v.toLowerCase()),
+  nidn: z.string().min(1),
+  noTelp: z.string().min(1),
+  jfa: jfaSchema,
+  homebaseUniv: z.string().min(1),
   kkId: z.string().nullable().optional(),
 });
 
@@ -47,6 +59,9 @@ export const createDosenSchema = z.object({
   kkId: z.string().nullable().optional(),
   coeId: z.string().nullable().optional(),
   bebanStruktural: z.string().nullable().optional(),
+  bebanStrukturalSks: z.coerce.number().nonnegative().nullable().optional(),
+  noTelp: z.string().nullable().optional(),
+  homebaseUniv: z.string().nullable().optional(),
   jenis: dosenJenisSchema.optional(),
 });
 

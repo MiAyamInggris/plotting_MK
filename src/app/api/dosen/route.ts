@@ -46,6 +46,7 @@ export async function GET(request: Request) {
       kk: { select: { nama: true } },
       coe: { select: { nama: true } },
       user: { select: { id: true, role: true, prodiId: true, kkId: true, aktif: true } },
+      createdBy: { select: { name: true } },
     },
   });
 

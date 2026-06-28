@@ -22,7 +22,15 @@ export async function GET(request: Request) {
       ...(user.role === "KETUA_KK" ? { kkId: user.kkId } : {}),
     },
     orderBy: { kode: "asc" },
-    select: { id: true, kode: true, nama: true, kkId: true, aktif: true, jenis: true },
+    select: {
+      id: true,
+      kode: true,
+      nama: true,
+      kkId: true,
+      aktif: true,
+      jenis: true,
+      bebanStrukturalSks: true,
+    },
   });
 
   const loadByDosen = await prisma.kelas.groupBy({
@@ -32,9 +40,12 @@ export async function GET(request: Request) {
   });
   const totalSksByDosen = new Map(loadByDosen.map((row) => [row.dosenId, row._sum.sks ?? 0]));
 
-  const options = dosenList.map((d) => ({
+  // totalSks here is the full beban (teaching + struktural), matching the
+  // same cap warning and Beban Dosen recap figure -- never a second,
+  // teaching-only number that could silently disagree.
+  const options = dosenList.map(({ bebanStrukturalSks, ...d }) => ({
     ...d,
-    totalSks: totalSksByDosen.get(d.id) ?? 0,
+    totalSks: (totalSksByDosen.get(d.id) ?? 0) + (bebanStrukturalSks ?? 0),
   }));
 
   return NextResponse.json({ dosen: options });

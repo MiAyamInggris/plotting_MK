@@ -106,7 +106,9 @@ export async function PATCH(
       },
       _sum: { sks: true },
     });
-    const totalAfter = (existingLoad._sum.sks ?? 0) + existing.sks;
+    // Beban SKS for the cap warning includes struktural load, not just
+    // teaching, consistent with the Beban Dosen recap's totalBeban figure.
+    const totalAfter = (existingLoad._sum.sks ?? 0) + existing.sks + (dosen.bebanStrukturalSks ?? 0);
 
     const capCheck = checkSksCap(dosen.kode, totalAfter);
     if (capCheck) warnings.push(capCheck);

@@ -99,6 +99,12 @@ model Dosen {
   coeId             String?
   coe               CenterOfExcellence? @relation(fields: [coeId], references: [id])
   bebanStruktural   String?
+  // Numeric SKS value of the structural role (separate from the free-text
+  // label above, which stays as an unmigrated legacy field).
+  bebanStrukturalSks Float?
+  // DLB-only in practice (nullable so TETAP rows are unaffected).
+  noTelp            String?
+  homebaseUniv      String?
   aktif             Boolean            @default(true)
   jenis             DosenJenis         @default(TETAP)
   // Who self-registered this dosen as a DLB (Part of Refinement 05). Null for
