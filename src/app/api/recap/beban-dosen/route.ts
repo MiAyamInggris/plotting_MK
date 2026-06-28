@@ -3,6 +3,20 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { resolveSemester } from "@/lib/semester";
 import { DEFAULT_SKS_CAP } from "@/lib/config";
+import {
+  buildChartSlice,
+  buildTableSlice,
+  CHART_METRICS,
+  CHART_MODES,
+  TABLE_PAGE_SIZES,
+  type ChartMetric,
+  type ChartMode,
+} from "@/lib/bebanDosenRecap";
+
+function parseIntParam(value: string | null, fallback: number): number {
+  const n = value ? parseInt(value, 10) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
@@ -13,6 +27,21 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const kkId = searchParams.get("kkId");
   const homebaseProdiId = searchParams.get("homebaseProdiId");
+
+  const chartModeParam = searchParams.get("chartMode");
+  const chartMode: ChartMode = CHART_MODES.includes(chartModeParam as ChartMode)
+    ? (chartModeParam as ChartMode)
+    : "top10";
+  const chartMetricParam = searchParams.get("chartMetric");
+  const chartMetric: ChartMetric = CHART_METRICS.includes(chartMetricParam as ChartMetric)
+    ? (chartMetricParam as ChartMetric)
+    : "totalBeban";
+  const chartPage = parseIntParam(searchParams.get("chartPage"), 1);
+  const tablePage = parseIntParam(searchParams.get("tablePage"), 1);
+  const tablePageSizeParam = parseIntParam(searchParams.get("tablePageSize"), 20);
+  const tablePageSize = TABLE_PAGE_SIZES.includes(tablePageSizeParam as 20 | 50)
+    ? tablePageSizeParam
+    : 20;
 
   const semesterResult = await resolveSemester(user, searchParams.get("semesterPeriodeId"));
   if (!semesterResult.ok) {
@@ -106,7 +135,12 @@ export async function GET(request: Request) {
     };
   });
 
-  result.sort((a, b) => b.totalBeban - a.totalBeban);
+  // Chart and table both slice the exact same per-dosen computation above so
+  // their figures can never disagree, even though they rank/paginate it
+  // differently (chart: top-10-or-paged by a chosen metric; table: always
+  // heaviest-beban-first, 20/50 per page).
+  const chart = buildChartSlice(result, { mode: chartMode, metric: chartMetric, page: chartPage });
+  const table = buildTableSlice(result, { page: tablePage, pageSize: tablePageSize });
 
-  return NextResponse.json({ dosen: result, activePeriode, sksCap: DEFAULT_SKS_CAP });
+  return NextResponse.json({ activePeriode, sksCap: DEFAULT_SKS_CAP, chart, table });
 }

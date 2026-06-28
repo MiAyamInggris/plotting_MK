@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
-import { ChevronDown, ChevronRight, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,13 @@ import { EmptyState } from "@/components/EmptyState";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { PivotResult, type Pivot } from "@/components/PivotResult";
 import { useSemester } from "@/components/SemesterContext";
+import {
+  CHART_METRICS,
+  TABLE_PAGE_SIZES,
+  type ChartMetric,
+  type ChartMode,
+  type TablePageSize,
+} from "@/lib/bebanDosenRecap";
 
 type ProgramStudi = { id: string; kode: string; nama: string };
 type KelompokKeahlian = { id: string; nama: string };
@@ -53,7 +61,18 @@ type Row = {
   byProdi: ByProdi[];
 };
 
+type PageSlice<T> = { rows: T[]; page: number; pageSize: number; totalCount: number; totalPages: number };
+
 const ALL = "__all__";
+
+const METRIC_LABELS: Record<ChartMetric, string> = {
+  totalBeban: "Beban SKS terberat",
+  jumlahKelas: "Kelas terbanyak",
+  jumlahMK: "Jenis MK terbanyak",
+};
+
+const LS_METRIC_KEY = "bebanDosen.chartMetric";
+const LS_PAGE_SIZE_KEY = "bebanDosen.tablePageSize";
 
 // Telkom red family for over-quota bars, neutral slate for within-quota --
 // the struktural segment stays one shade lighter than teaching so the two
@@ -95,28 +114,73 @@ export default function BebanDosenTab({
   const { semesterId } = useSemester();
   const [kkId, setKkId] = useState(ALL);
   const [homebaseProdiId, setHomebaseProdiId] = useState(ALL);
-  const [rows, setRows] = useState<Row[]>([]);
   const [sksCap, setSksCap] = useState(15);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const [chartMode, setChartMode] = useState<ChartMode>("top10");
+  const [chartMetric, setChartMetric] = useState<ChartMetric>("totalBeban");
+  const [chartPage, setChartPage] = useState(1);
+  const [chartData, setChartData] = useState<PageSlice<Row>>({
+    rows: [],
+    page: 1,
+    pageSize: 10,
+    totalCount: 0,
+    totalPages: 1,
+  });
+
+  const [tablePage, setTablePage] = useState(1);
+  const [tablePageSize, setTablePageSize] = useState<TablePageSize>(20);
+  const [tableData, setTableData] = useState<PageSlice<Row>>({
+    rows: [],
+    page: 1,
+    pageSize: 20,
+    totalCount: 0,
+    totalPages: 1,
+  });
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pivotByDosen, setPivotByDosen] = useState<Record<string, Pivot>>({});
   const [pivotLoading, setPivotLoading] = useState<string | null>(null);
+
+  // Restore persisted preferences once on mount -- localStorage isn't
+  // available during SSR, so this can't run in a useState initializer.
+  useEffect(() => {
+    const savedMetric = localStorage.getItem(LS_METRIC_KEY);
+    if (savedMetric && (CHART_METRICS as readonly string[]).includes(savedMetric)) {
+      setChartMetric(savedMetric as ChartMetric);
+    }
+    const savedPageSize = Number(localStorage.getItem(LS_PAGE_SIZE_KEY));
+    if ((TABLE_PAGE_SIZES as readonly number[]).includes(savedPageSize)) {
+      setTablePageSize(savedPageSize as TablePageSize);
+    }
+  }, []);
 
   async function load() {
     if (!semesterId) return;
     setLoading(true);
     setLoadError(null);
     try {
-      const params = new URLSearchParams({ semesterPeriodeId: semesterId });
+      const params = new URLSearchParams({
+        semesterPeriodeId: semesterId,
+        chartMode,
+        chartMetric,
+        chartPage: String(chartPage),
+        tablePage: String(tablePage),
+        tablePageSize: String(tablePageSize),
+      });
       if (kkId !== ALL) params.set("kkId", kkId);
       if (homebaseProdiId !== ALL) params.set("homebaseProdiId", homebaseProdiId);
       const res = await fetch(`/api/recap/beban-dosen?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
-      setRows(data.dosen);
+      setChartData(data.chart);
+      setTableData(data.table);
       setSksCap(data.sksCap ?? 15);
+      // Sync local page state from the server's (possibly clamped) page so
+      // the UI never drifts from what was actually returned.
+      setChartPage(data.chart.page);
+      setTablePage(data.table.page);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -127,7 +191,32 @@ export default function BebanDosenTab({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kkId, homebaseProdiId, semesterId]);
+  }, [kkId, homebaseProdiId, semesterId, chartMode, chartMetric, chartPage, tablePage, tablePageSize]);
+
+  function onFilterChange(setter: (v: string) => void) {
+    return (v: string) => {
+      setter(v);
+      setChartPage(1);
+      setTablePage(1);
+    };
+  }
+
+  function onMetricChange(metric: ChartMetric) {
+    setChartMetric(metric);
+    setChartPage(1);
+    localStorage.setItem(LS_METRIC_KEY, metric);
+  }
+
+  function onModeChange(mode: ChartMode) {
+    setChartMode(mode);
+    setChartPage(1);
+  }
+
+  function onPageSizeChange(size: TablePageSize) {
+    setTablePageSize(size);
+    setTablePage(1);
+    localStorage.setItem(LS_PAGE_SIZE_KEY, String(size));
+  }
 
   async function toggleExpand(row: Row) {
     if (expandedId === row.id) {
@@ -151,12 +240,15 @@ export default function BebanDosenTab({
     }
   }
 
-  const chartData = rows.map((r) => ({
+  const chartRows = chartData.rows.map((r) => ({
     kode: r.kode,
     teaching: r.totalSksPengajaran,
     struktural: r.bebanStrukturalSks ?? 0,
     overQuota: r.overQuota,
   }));
+
+  const tableRangeStart = (tableData.page - 1) * tableData.pageSize + 1;
+  const tableRangeEnd = Math.min(tableData.page * tableData.pageSize, tableData.totalCount);
 
   return (
     <Card>
@@ -164,7 +256,7 @@ export default function BebanDosenTab({
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">KK</Label>
-            <Select value={kkId} onValueChange={setKkId}>
+            <Select value={kkId} onValueChange={onFilterChange(setKkId)}>
               <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>All</SelectItem>
@@ -176,7 +268,7 @@ export default function BebanDosenTab({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Homebase Prodi</Label>
-            <Select value={homebaseProdiId} onValueChange={setHomebaseProdiId}>
+            <Select value={homebaseProdiId} onValueChange={onFilterChange(setHomebaseProdiId)}>
               <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>All</SelectItem>
@@ -194,13 +286,76 @@ export default function BebanDosenTab({
           </Alert>
         )}
 
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Ranking</Label>
+            <Select value={chartMetric} onValueChange={(v) => onMetricChange(v as ChartMetric)}>
+              <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CHART_METRICS.map((m) => (
+                  <SelectItem key={m} value={m}>{METRIC_LABELS[m]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-md border border-border p-0.5">
+              <Button
+                type="button"
+                size="sm"
+                variant={chartMode === "top10" ? "default" : "ghost"}
+                className="h-7"
+                onClick={() => onModeChange("top10")}
+              >
+                Top 10
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={chartMode === "paged" ? "default" : "ghost"}
+                className="h-7"
+                onClick={() => onModeChange("paged")}
+              >
+                Paginated
+              </Button>
+            </div>
+            {chartMode === "paged" && (
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="size-7"
+                  disabled={chartData.page <= 1}
+                  onClick={() => setChartPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="size-3.5" />
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Page {chartData.page} of {chartData.totalPages}
+                </span>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="size-7"
+                  disabled={chartData.page >= chartData.totalPages}
+                  onClick={() => setChartPage((p) => p + 1)}
+                >
+                  <ChevronRight className="size-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {loading ? (
           <Skeleton className="h-48 w-full" />
-        ) : rows.length === 0 ? (
+        ) : chartRows.length === 0 ? (
           <EmptyState icon={Users} title="No dosen found" />
         ) : (
-          <ResponsiveContainer width="100%" height={Math.max(160, rows.length * 34 + 40)}>
-            <BarChart data={chartData} layout="vertical" margin={{ top: 20, right: 24, left: 8, bottom: 8 }}>
+          <ResponsiveContainer width="100%" height={Math.max(160, chartRows.length * 34 + 40)}>
+            <BarChart data={chartRows} layout="vertical" margin={{ top: 20, right: 24, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 11 }} />
               <YAxis type="category" dataKey="kode" width={72} tick={{ fontSize: 11 }} />
@@ -212,18 +367,56 @@ export default function BebanDosenTab({
                 label={{ value: `Quota ${sksCap}`, position: "top", fontSize: 11, fill: "#ED1E28" }}
               />
               <Bar dataKey="teaching" stackId="beban" radius={[4, 0, 0, 4]}>
-                {chartData.map((d, i) => (
+                {chartRows.map((d, i) => (
                   <Cell key={i} fill={d.overQuota ? COLOR_TEACHING_OVER : COLOR_TEACHING_IN} />
                 ))}
               </Bar>
               <Bar dataKey="struktural" stackId="beban" radius={[0, 4, 4, 0]}>
-                {chartData.map((d, i) => (
+                {chartRows.map((d, i) => (
                   <Cell key={i} fill={d.overQuota ? COLOR_STRUKTURAL_OVER : COLOR_STRUKTURAL_IN} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Label className="text-xs text-muted-foreground">
+            {tableData.totalCount === 0
+              ? "0 dosen"
+              : `${tableRangeStart}–${tableRangeEnd} of ${tableData.totalCount}`}
+          </Label>
+          <div className="flex items-center gap-2">
+            <Select value={String(tablePageSize)} onValueChange={(v) => onPageSizeChange(Number(v) as TablePageSize)}>
+              <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TABLE_PAGE_SIZES.map((s) => (
+                  <SelectItem key={s} value={String(s)}>{s} / page</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="size-8"
+              disabled={tableData.page <= 1}
+              onClick={() => setTablePage((p) => p - 1)}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="size-8"
+              disabled={tableData.page >= tableData.totalPages}
+              onClick={() => setTablePage((p) => p + 1)}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        </div>
 
         <Table>
           <TableHeader>
@@ -242,14 +435,14 @@ export default function BebanDosenTab({
           <TableBody>
             {loading ? (
               <TableSkeleton columns={9} />
-            ) : rows.length === 0 ? (
+            ) : tableData.rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9}>
                   <EmptyState icon={Users} title="No dosen found" />
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((r) => (
+              tableData.rows.map((r) => (
                 <Fragment key={r.id}>
                   <TableRow className="h-12">
                     <TableCell className="font-medium">
