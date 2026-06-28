@@ -67,10 +67,6 @@ export function canPlot(
   return { allowed: true };
 }
 
-export function canManageSections(user: AuthUser | null | undefined): boolean {
-  return user?.role === "ADMIN" || user?.role === "KETUA_KK";
-}
-
 /** Admin or Ketua KK may self-register a Dosen Luar Biasa (DLB) ahead of plotting them. */
 export function canRegisterDlb(user: AuthUser | null | undefined): boolean {
   return user?.role === "ADMIN" || user?.role === "KETUA_KK";

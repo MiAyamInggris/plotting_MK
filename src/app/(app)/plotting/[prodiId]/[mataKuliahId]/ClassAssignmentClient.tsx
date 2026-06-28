@@ -1,19 +1,16 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Plus, X, CalendarRange } from "lucide-react";
+import { ChevronLeft, CalendarRange } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useSemester } from "@/components/SemesterContext";
-import { cn } from "@/lib/utils";
 import DosenPicker, { type AssignContext, type DosenOption } from "../../DosenPicker";
 
 type Dosen = { id: string; kode: string; nama: string; kkId: string | null; aktif: boolean };
@@ -47,27 +44,23 @@ type RuleWarning = { level: "error" | "warning"; code: string; message: string }
 function SectionChip({
   kelas,
   canEdit,
-  canManageSections,
   dosenOptions,
   context,
   semesterId,
   canRegisterDlb,
   onAssign,
   onClear,
-  onRemove,
   onDlbRegistered,
   saving,
 }: {
   kelas: Kelas;
   canEdit: boolean;
-  canManageSections: boolean;
   dosenOptions: DosenOption[];
   context: AssignContext;
   semesterId: string;
   canRegisterDlb: boolean;
   onAssign: (dosenId: string) => void;
   onClear: () => void;
-  onRemove: () => void;
   onDlbRegistered: (dosen: DosenOption) => void;
   saving: boolean;
 }) {
@@ -112,23 +105,6 @@ function SectionChip({
           )}
         </>
       )}
-      {canManageSections && (
-        <ConfirmDialog
-          trigger={
-            <Button
-              variant="outline"
-              size="icon-sm"
-              className="size-6 text-destructive"
-              disabled={saving}
-            >
-              <X className="size-3" />
-            </Button>
-          }
-          title="Remove this section?"
-          description={`Section ${kelas.sectionSuffix} will be permanently removed. This cannot be undone.`}
-          onConfirm={onRemove}
-        />
-      )}
     </div>
   );
 }
@@ -137,13 +113,11 @@ export default function ClassAssignmentClient({
   prodiId,
   mataKuliahId,
   canEdit,
-  canManageSections,
   canRegisterDlb,
 }: {
   prodiId: string;
   mataKuliahId: string;
   canEdit: boolean;
-  canManageSections: boolean;
   canRegisterDlb: boolean;
 }) {
   const { semesterId } = useSemester();
@@ -155,7 +129,6 @@ export default function ClassAssignmentClient({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [savingKelasId, setSavingKelasId] = useState<string | null>(null);
   const [warningsByKelas, setWarningsByKelas] = useState<Record<string, RuleWarning[]>>({});
-  const [sectionForms, setSectionForms] = useState<Record<string, string>>({});
 
   async function load() {
     if (!semesterId) return;
@@ -194,7 +167,6 @@ export default function ClassAssignmentClient({
   }, [prodiId, mataKuliahId, semesterId]);
 
   const effectiveCanEdit = canEdit && semesterWritable;
-  const effectiveCanManageSections = canManageSections && semesterWritable;
 
   function addDlbOption(dosen: DosenOption) {
     setDosenOptions((prev) => [...prev, dosen].sort((a, b) => a.kode.localeCompare(b.kode)));
@@ -240,45 +212,6 @@ export default function ClassAssignmentClient({
     }
   }
 
-  async function removeSection(kelasId: string) {
-    setSavingKelasId(kelasId);
-    try {
-      const res = await fetch(`/api/plotting/kelas/${kelasId}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(typeof data.error === "string" ? data.error : "Failed to remove section");
-      }
-      toast.success("Section removed");
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to remove section");
-    } finally {
-      setSavingKelasId(null);
-    }
-  }
-
-  async function addSection(courseOfferingId: string, e: FormEvent) {
-    e.preventDefault();
-    const suffix = sectionForms[courseOfferingId]?.trim();
-    if (!suffix) return;
-    try {
-      const res = await fetch("/api/plotting/kelas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseOfferingId, sectionSuffix: suffix }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(typeof data.error === "string" ? data.error : "Failed to add section");
-      }
-      setSectionForms((prev) => ({ ...prev, [courseOfferingId]: "" }));
-      toast.success("Section added");
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to add section");
-    }
-  }
-
   const allWarnings = Object.values(warningsByKelas).flat();
 
   return (
@@ -311,7 +244,7 @@ export default function ClassAssignmentClient({
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
       )}
-      {!loading && !semesterWritable && (canEdit || canManageSections) && (
+      {!loading && !semesterWritable && canEdit && (
         <Alert>
           <AlertDescription>
             This semester is read-only. Switch to the active semester to make changes.
@@ -351,50 +284,35 @@ export default function ClassAssignmentClient({
                   </span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {co.kelas.map((k) => (
-                    <SectionChip
-                      key={k.id}
-                      kelas={k}
-                      canEdit={effectiveCanEdit}
-                      canManageSections={effectiveCanManageSections}
-                      dosenOptions={dosenOptions}
-                      semesterId={semesterId}
-                      canRegisterDlb={canRegisterDlb}
-                      context={{
-                        prodiKode: prodi?.kode ?? "",
-                        prodiNama: prodi?.nama ?? "",
-                        kodeMK: mk.kodeMK,
-                        mkNama: mk.nama,
-                        kodeKelas: k.kodeKelas,
-                        sks: k.sks,
-                      }}
-                      onAssign={(dosenId) => assignDosen(k.id, dosenId)}
-                      onClear={() => clearDosen(k.id)}
-                      onRemove={() => removeSection(k.id)}
-                      onDlbRegistered={addDlbOption}
-                      saving={savingKelasId === k.id}
-                    />
-                  ))}
+                  {co.kelas.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      No classes opened yet for this offering.
+                    </p>
+                  ) : (
+                    co.kelas.map((k) => (
+                      <SectionChip
+                        key={k.id}
+                        kelas={k}
+                        canEdit={effectiveCanEdit}
+                        dosenOptions={dosenOptions}
+                        semesterId={semesterId}
+                        canRegisterDlb={canRegisterDlb}
+                        context={{
+                          prodiKode: prodi?.kode ?? "",
+                          prodiNama: prodi?.nama ?? "",
+                          kodeMK: mk.kodeMK,
+                          mkNama: mk.nama,
+                          kodeKelas: k.kodeKelas,
+                          sks: k.sks,
+                        }}
+                        onAssign={(dosenId) => assignDosen(k.id, dosenId)}
+                        onClear={() => clearDosen(k.id)}
+                        onDlbRegistered={addDlbOption}
+                        saving={savingKelasId === k.id}
+                      />
+                    ))
+                  )}
                 </div>
-                {effectiveCanManageSections && (
-                  <form
-                    onSubmit={(e) => addSection(co.id, e)}
-                    className={cn("mt-2 flex items-center gap-2")}
-                  >
-                    <Input
-                      placeholder="new suffix, e.g. 09"
-                      className="h-7 w-32 text-xs"
-                      value={sectionForms[co.id] ?? ""}
-                      onChange={(e) =>
-                        setSectionForms((prev) => ({ ...prev, [co.id]: e.target.value }))
-                      }
-                    />
-                    <Button type="submit" variant="outline" size="sm" className="h-7 text-xs">
-                      <Plus className="size-3" />
-                      Add section
-                    </Button>
-                  </form>
-                )}
               </CardContent>
             </Card>
           ))

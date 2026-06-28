@@ -13,6 +13,7 @@ import {
   UserCog,
   CalendarClock,
   UserRound,
+  Settings2,
 } from "lucide-react";
 
 export type NavGroup = "Overview" | "Master Data" | "Administration";
@@ -52,6 +53,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Mata Kuliah",
     roles: ["ADMIN", "KAPRODI"],
     icon: BookOpen,
+    group: "Master Data",
+  },
+  {
+    href: "/setting-mk-kelas",
+    label: "Setting MK dan Kelas",
+    roles: ["ADMIN", "KAPRODI"],
+    icon: Settings2,
     group: "Master Data",
   },
   {

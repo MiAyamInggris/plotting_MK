@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment, useEffect, useState, type FormEvent } from "react";
-import { ChevronDown, ChevronRight, Plus, BookOpen, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Plus, BookOpen, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,25 +27,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/EmptyState";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { useSemester } from "@/components/SemesterContext";
+import { cn } from "@/lib/utils";
 
 type Role = "ADMIN" | "KAPRODI" | "KETUA_KK";
-
-type Kelas = {
-  id: string;
-  kodeKelas: string;
-  sectionSuffix: string;
-  sks: number;
-  dosenId: string | null;
-};
-
-type CourseOffering = {
-  id: string;
-  semesterKe: number;
-  tahunAngkatan: number;
-  kelasPrefix: string;
-  kelas: Kelas[];
-};
 
 type MataKuliah = {
   id: string;
@@ -55,7 +39,6 @@ type MataKuliah = {
   ket: string | null;
   prodiId: string;
   prodi: { kode: string; nama: string };
-  courseOfferings: CourseOffering[];
 };
 
 type ProgramStudi = { id: string; kode: string; nama: string };
@@ -63,52 +46,42 @@ type ProgramStudi = { id: string; kode: string; nama: string };
 type CreateForm = { kodeMK: string; nama: string; sks: string; ket: string };
 const EMPTY_CREATE: CreateForm = { kodeMK: "", nama: "", sks: "", ket: "" };
 
-function OfferingRows({
-  offerings,
-  canManage,
-  onDelete,
-}: {
-  offerings: CourseOffering[];
-  canManage: boolean;
-  onDelete: (id: string) => void;
-}) {
-  if (offerings.length === 0) {
-    return (
-      <TableRow>
-        <TableCell colSpan={6} className="text-center text-muted-foreground">
-          No offerings yet.
-        </TableCell>
-      </TableRow>
-    );
-  }
+type ImportWarning = { level: "warning" | "error"; message: string; context?: string };
+type ImportReport = { counts: Record<string, number>; warnings: ImportWarning[] };
+
+function ImportReportView({ report }: { report: ImportReport }) {
   return (
-    <>
-      {offerings.map((co) => (
-        <TableRow key={co.id}>
-          <TableCell>{co.semesterKe}</TableCell>
-          <TableCell>{co.tahunAngkatan}</TableCell>
-          <TableCell>{co.kelasPrefix}</TableCell>
-          <TableCell className="text-right">{co.kelas.length}</TableCell>
-          <TableCell className="text-right">
-            {co.kelas.reduce((sum, k) => sum + (k.dosenId ? k.sks : 0), 0)}
-          </TableCell>
-          <TableCell className="text-right">
-            {canManage && (
-              <ConfirmDialog
-                trigger={
-                  <Button variant="outline" size="sm" className="text-destructive">
-                    Remove
-                  </Button>
-                }
-                title="Remove this offering?"
-                description="This cannot be undone."
-                onConfirm={() => onDelete(co.id)}
-              />
-            )}
-          </TableCell>
-        </TableRow>
-      ))}
-    </>
+    <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+      <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+        {Object.entries(report.counts).map(([key, value]) => (
+          <div
+            key={key}
+            className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-1.5"
+          >
+            <dt className="text-muted-foreground">{key}</dt>
+            <dd className="font-medium text-foreground">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {report.warnings.length > 0 && (
+        <ul className="max-h-48 space-y-1 overflow-y-auto text-sm">
+          {report.warnings.map((w, i) => (
+            <li
+              key={i}
+              className={cn(
+                "rounded-md px-2.5 py-1.5",
+                w.level === "error"
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400",
+              )}
+            >
+              {w.context && <span className="font-mono text-xs opacity-70">[{w.context}] </span>}
+              {w.message}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -122,28 +95,27 @@ export default function MataKuliahClient({
   programStudi: ProgramStudi[];
 }) {
   const isKaprodi = role === "KAPRODI";
-  const { semesterId } = useSemester();
   const [selectedProdiId, setSelectedProdiId] = useState(
     isKaprodi ? userProdiId ?? "" : programStudi[0]?.id ?? "",
   );
 
   const [items, setItems] = useState<MataKuliah[]>([]);
-  const [semesterWritable, setSemesterWritable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const [offeringForms, setOfferingForms] = useState<
-    Record<string, { semesterKe: string; tahunAngkatan: string; kelasPrefix: string }>
-  >({});
+  const [importOpen, setImportOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importReport, setImportReport] = useState<ImportReport | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function load() {
-    if (!selectedProdiId || !semesterId) {
+    if (!selectedProdiId) {
       setItems([]);
       setLoading(false);
       return;
@@ -151,13 +123,10 @@ export default function MataKuliahClient({
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(
-        `/api/mata-kuliah?prodiId=${selectedProdiId}&semesterPeriodeId=${semesterId}`,
-      );
+      const res = await fetch(`/api/mata-kuliah?prodiId=${selectedProdiId}`);
       if (!res.ok) throw new Error("Failed to load mata kuliah");
       const data = await res.json();
       setItems(data.mataKuliah);
-      setSemesterWritable(data.canWrite);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Failed to load mata kuliah");
     } finally {
@@ -168,7 +137,7 @@ export default function MataKuliahClient({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProdiId, semesterId]);
+  }, [selectedProdiId]);
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -215,51 +184,27 @@ export default function MataKuliahClient({
     }
   }
 
-  function offeringForm(mkId: string) {
-    return offeringForms[mkId] ?? { semesterKe: "", tahunAngkatan: "", kelasPrefix: "" };
-  }
-
-  async function onCreateOffering(mkId: string, e: FormEvent) {
+  async function onImport(e: FormEvent) {
     e.preventDefault();
-    const form = offeringForm(mkId);
+    const file = fileInputRef.current?.files?.[0];
+    if (!file || !selectedProdiId) return;
+    setImporting(true);
+    setImportError(null);
+    setImportReport(null);
     try {
-      const res = await fetch("/api/course-offerings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mataKuliahId: mkId,
-          semesterKe: Number(form.semesterKe),
-          tahunAngkatan: Number(form.tahunAngkatan),
-          kelasPrefix: form.kelasPrefix,
-          semesterPeriodeId: semesterId,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(typeof data.error === "string" ? data.error : "Failed to create offering");
-      }
-      setOfferingForms((prev) => ({
-        ...prev,
-        [mkId]: { semesterKe: "", tahunAngkatan: "", kelasPrefix: "" },
-      }));
-      toast.success("Offering added");
+      const formData = new FormData();
+      formData.set("file", file);
+      formData.set("prodiId", selectedProdiId);
+      const res = await fetch("/api/import/mata-kuliah", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Import failed");
+      setImportReport(data.report);
+      toast.success("Import finished");
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create offering");
-    }
-  }
-
-  async function deleteOffering(id: string) {
-    try {
-      const res = await fetch(`/api/course-offerings/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(typeof data.error === "string" ? data.error : "Failed to delete offering");
-      }
-      toast.success("Offering removed");
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete offering");
+      setImportError(e instanceof Error ? e.message : "Import failed");
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -282,6 +227,44 @@ export default function MataKuliahClient({
               </SelectContent>
             </Select>
           )}
+
+          <Dialog
+            open={importOpen}
+            onOpenChange={(open) => {
+              setImportOpen(open);
+              if (!open) {
+                setImportReport(null);
+                setImportError(null);
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline" disabled={!selectedProdiId}>
+                <Upload className="size-4" />
+                Import Mata Kuliah
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Import Mata Kuliah</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={onImport} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="mk-import-file">
+                    .xlsx with columns: No | Kode MK | Nama MK | SKS
+                  </Label>
+                  <Input id="mk-import-file" type="file" accept=".xlsx,.xls" ref={fileInputRef} required />
+                </div>
+                {importError && <p className="text-sm text-destructive">{importError}</p>}
+                {importReport && <ImportReportView report={importReport} />}
+                <DialogFooter>
+                  <Button type="submit" disabled={importing}>
+                    {importing ? "Importing…" : "Import"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
@@ -357,21 +340,19 @@ export default function MataKuliahClient({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="sticky top-0 w-8 bg-card" />
               <TableHead className="sticky top-0 bg-card">Kode MK</TableHead>
               <TableHead className="sticky top-0 bg-card">Nama</TableHead>
               <TableHead className="sticky top-0 bg-card text-right">SKS</TableHead>
               <TableHead className="sticky top-0 bg-card">Ket</TableHead>
-              <TableHead className="sticky top-0 bg-card text-right">Offerings</TableHead>
               <TableHead className="sticky top-0 bg-card text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableSkeleton columns={7} />
+              <TableSkeleton columns={5} />
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={5}>
                   <EmptyState
                     icon={BookOpen}
                     title="No Mata Kuliah found"
@@ -380,132 +361,26 @@ export default function MataKuliahClient({
                 </TableCell>
               </TableRow>
             ) : (
-              items.map((mk) => {
-                const expanded = expandedId === mk.id;
-                const form = offeringForm(mk.id);
-                return (
-                  <Fragment key={mk.id}>
-                    <TableRow
-                      className="h-12 cursor-pointer"
-                      onClick={() => setExpandedId(expanded ? null : mk.id)}
-                    >
-                      <TableCell>
-                        {expanded ? (
-                          <ChevronDown className="size-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="size-4 text-muted-foreground" />
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">{mk.kodeMK}</TableCell>
-                      <TableCell>{mk.nama}</TableCell>
-                      <TableCell className="text-right">{mk.sks}</TableCell>
-                      <TableCell className="text-muted-foreground">{mk.ket ?? "—"}</TableCell>
-                      <TableCell className="text-right">{mk.courseOfferings.length}</TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <ConfirmDialog
-                          trigger={
-                            <Button variant="outline" size="icon-sm" className="text-destructive">
-                              <Trash2 className="size-4" />
-                            </Button>
-                          }
-                          title="Delete Mata Kuliah?"
-                          description={`This will permanently delete ${mk.kodeMK} — ${mk.nama}. This cannot be undone.`}
-                          onConfirm={() => deleteMataKuliah(mk.id)}
-                        />
-                      </TableCell>
-                    </TableRow>
-                    {expanded && (
-                      <TableRow className="bg-muted/30 hover:bg-muted/30">
-                        <TableCell colSpan={7} className="space-y-3 p-4">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Semester</TableHead>
-                                <TableHead>Angkatan</TableHead>
-                                <TableHead>Prefix</TableHead>
-                                <TableHead className="text-right">Sections</TableHead>
-                                <TableHead className="text-right">Total SKS plotted</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              <OfferingRows
-                                offerings={mk.courseOfferings}
-                                canManage={semesterWritable}
-                                onDelete={deleteOffering}
-                              />
-                            </TableBody>
-                          </Table>
-
-                          {!semesterWritable && (
-                            <p className="text-sm text-muted-foreground">
-                              This semester is read-only — switch to the active semester to add or
-                              remove offerings.
-                            </p>
-                          )}
-
-                          {semesterWritable && (
-                            <form
-                              onSubmit={(e) => onCreateOffering(mk.id, e)}
-                              className="flex flex-wrap items-end gap-3"
-                            >
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Semester ke</Label>
-                                <Input
-                                  required
-                                  type="number"
-                                  className="w-24"
-                                  value={form.semesterKe}
-                                  onChange={(e) =>
-                                    setOfferingForms((prev) => ({
-                                      ...prev,
-                                      [mk.id]: { ...form, semesterKe: e.target.value },
-                                    }))
-                                  }
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Tahun angkatan</Label>
-                                <Input
-                                  required
-                                  type="number"
-                                  className="w-28"
-                                  value={form.tahunAngkatan}
-                                  onChange={(e) =>
-                                    setOfferingForms((prev) => ({
-                                      ...prev,
-                                      [mk.id]: { ...form, tahunAngkatan: e.target.value },
-                                    }))
-                                  }
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Kelas prefix</Label>
-                                <Input
-                                  required
-                                  placeholder="S1IF-10-"
-                                  className="w-40"
-                                  value={form.kelasPrefix}
-                                  onChange={(e) =>
-                                    setOfferingForms((prev) => ({
-                                      ...prev,
-                                      [mk.id]: { ...form, kelasPrefix: e.target.value },
-                                    }))
-                                  }
-                                />
-                              </div>
-                              <Button type="submit" variant="outline" size="sm">
-                                <Plus className="size-4" />
-                                Add offering
-                              </Button>
-                            </form>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </Fragment>
-                );
-              })
+              items.map((mk) => (
+                <TableRow key={mk.id} className="h-12">
+                  <TableCell className="font-medium">{mk.kodeMK}</TableCell>
+                  <TableCell>{mk.nama}</TableCell>
+                  <TableCell className="text-right">{mk.sks}</TableCell>
+                  <TableCell className="text-muted-foreground">{mk.ket ?? "—"}</TableCell>
+                  <TableCell className="text-right">
+                    <ConfirmDialog
+                      trigger={
+                        <Button variant="outline" size="icon-sm" className="text-destructive">
+                          <Trash2 className="size-4" />
+                        </Button>
+                      }
+                      title="Delete Mata Kuliah?"
+                      description={`This will permanently delete ${mk.kodeMK} — ${mk.nama}. This cannot be undone.`}
+                      onConfirm={() => deleteMataKuliah(mk.id)}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>

@@ -2,15 +2,12 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { canManageSections } from "@/lib/authz";
+import { canEditCourses } from "@/lib/authz";
 import { resolveWritableSemester } from "@/lib/semester";
 import { createKelasSchema } from "@/lib/validation/plotting";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!canManageSections(user)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const body = await request.json();
   const parsed = createKelasSchema.safeParse(body);
@@ -24,6 +21,9 @@ export async function POST(request: Request) {
   });
   if (!courseOffering) {
     return NextResponse.json({ error: "Course offering not found" }, { status: 404 });
+  }
+  if (!canEditCourses(user, courseOffering.prodiId)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const semesterResult = await resolveWritableSemester(user, courseOffering.semesterPeriodeId);

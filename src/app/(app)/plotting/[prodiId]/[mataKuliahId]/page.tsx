@@ -22,7 +22,6 @@ export default async function ClassAssignmentPage({
         prodiId={prodiId}
         mataKuliahId={mataKuliahId}
         canEdit={canEdit}
-        canManageSections={canEdit}
         canRegisterDlb={canRegisterDlb(user)}
       />
     </div>
