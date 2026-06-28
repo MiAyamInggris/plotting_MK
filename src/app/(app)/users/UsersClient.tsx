@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import type { Role } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ type DosenRow = {
   kode: string;
   nama: string;
   email: string | null;
+  nipYpt: string | null;
   homebaseProdiId: string | null;
   homebaseProdi: { kode: string; nama: string } | null;
   kkId: string | null;
@@ -188,6 +190,20 @@ export default function UsersClient() {
     }
   }
 
+  async function resetPassword(d: DosenRow) {
+    if (!d.user) return;
+    try {
+      const res = await fetch(`/api/users/${d.user.id}/reset-password`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(typeof data.error === "string" ? data.error : "Failed to reset password");
+      }
+      toast.success(`${d.kode}'s password was reset to the NIP-based default`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to reset password");
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -306,6 +322,31 @@ export default function UsersClient() {
                           <Button variant="outline" size="sm" onClick={() => toggleActive(d)}>
                             {d.user.aktif ? "Deactivate" : "Activate"}
                           </Button>
+                          {d.nipYpt ? (
+                            <ConfirmDialog
+                              trigger={
+                                <Button variant="outline" size="sm">
+                                  Reset Password
+                                </Button>
+                              }
+                              title={`Reset password for ${d.kode}?`}
+                              description="Password akan direset ke NIP sebelum tanda '-' (mis. 19910017-1 → 19910017). Dosen harus mengganti password saat login berikutnya."
+                              confirmLabel="Reset"
+                              variant="default"
+                              onConfirm={() => resetPassword(d)}
+                            />
+                          ) : (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button variant="outline" size="sm" disabled>
+                                    Reset Password
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>No NIP on file for this dosen</TooltipContent>
+                            </Tooltip>
+                          )}
                         </>
                       )}
                     </div>

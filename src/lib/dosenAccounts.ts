@@ -4,8 +4,14 @@ import type { ImportReport, ImportWarning } from "@/lib/import/types";
 
 // Default password = NIP truncated at the first "-" (e.g. "19910017-1" ->
 // "19910017"; "25000021" -> "25000021" unchanged). Predictable on purpose —
-// every account is created with mustChangePassword = true, forcing a real
-// password before the rest of the app is usable.
+// every account is created (or reset) with mustChangePassword = true,
+// forcing a real password before the rest of the app is usable. Shared by
+// initial provisioning below and the Admin "reset password" action so the
+// two can never derive a different default.
+export function deriveDefaultPassword(nipYpt: string): string {
+  return nipYpt.split("-")[0];
+}
+
 export async function generateDosenAccounts(): Promise<ImportReport> {
   const warnings: ImportWarning[] = [];
   const counts = { accountsCreated: 0, skippedNoEmail: 0, skippedNoNip: 0 };
@@ -44,8 +50,7 @@ export async function generateDosenAccounts(): Promise<ImportReport> {
       continue;
     }
 
-    const defaultPassword = dosen.nipYpt.split("-")[0];
-    const passwordHash = await bcrypt.hash(defaultPassword, 10);
+    const passwordHash = await bcrypt.hash(deriveDefaultPassword(dosen.nipYpt), 10);
 
     try {
       await prisma.user.create({
