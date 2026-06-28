@@ -66,7 +66,9 @@ export default function AppShell({
           </header>
 
           <main className="flex-1 p-6 lg:p-8">
-            <div className="mx-auto w-full max-w-7xl">{children}</div>
+            <div key={pathname} className="mx-auto w-full max-w-7xl animate-page-in">
+              {children}
+            </div>
           </main>
         </div>
       </div>

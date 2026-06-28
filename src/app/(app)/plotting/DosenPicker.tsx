@@ -92,6 +92,7 @@ function LoadBreakdownTooltip({ dosenId, semesterId }: { dosenId: string; semest
 export default function DosenPicker({
   trigger,
   options,
+  optionsLoading = false,
   context,
   semesterId,
   canRegisterDlb,
@@ -100,6 +101,7 @@ export default function DosenPicker({
 }: {
   trigger: React.ReactNode;
   options: DosenOption[];
+  optionsLoading?: boolean;
   context: AssignContext;
   semesterId: string;
   canRegisterDlb: boolean;
@@ -186,7 +188,7 @@ export default function DosenPicker({
             <Command>
               <CommandInput placeholder="Search kode or nama…" />
               <CommandList>
-                <CommandEmpty>No matching dosen</CommandEmpty>
+                <CommandEmpty>{optionsLoading ? "Loading dosen…" : "No matching dosen"}</CommandEmpty>
                 <CommandGroup>
                   {options.map((d) => {
                     const projected = d.totalSks + context.sks;

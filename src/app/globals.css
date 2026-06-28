@@ -39,6 +39,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-brand-maroon: #B6252A;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -49,38 +50,38 @@
 }
 
 :root {
-  --background: var(--color-white);
-  --foreground: var(--color-slate-900);
-  --card: var(--color-white);
-  --card-foreground: var(--color-slate-900);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-slate-900);
-  --primary: var(--color-indigo-600);
-  --primary-foreground: var(--color-white);
-  --secondary: var(--color-slate-100);
-  --secondary-foreground: var(--color-slate-900);
-  --muted: var(--color-slate-100);
-  --muted-foreground: var(--color-slate-500);
-  --accent: var(--color-slate-100);
-  --accent-foreground: var(--color-slate-900);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: var(--color-slate-200);
-  --input: var(--color-slate-200);
-  --ring: var(--color-indigo-600);
+  --background: #FFFFFF;
+  --foreground: #1A1A1A;
+  --card: #FFFFFF;
+  --card-foreground: #1A1A1A;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A1A;
+  --primary: #ED1E28;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F2F2F3;
+  --secondary-foreground: #1A1A1A;
+  --muted: #F2F2F3;
+  --muted-foreground: #55565B;
+  --accent: #F2F2F3;
+  --accent-foreground: #1A1A1A;
+  --destructive: #B6252A;
+  --border: #E5E5E6;
+  --input: #E5E5E6;
+  --ring: #ED1E28;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: var(--color-white);
-  --sidebar-foreground: var(--color-slate-900);
-  --sidebar-primary: var(--color-indigo-600);
-  --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-slate-100);
-  --sidebar-accent-foreground: var(--color-slate-900);
-  --sidebar-border: var(--color-slate-200);
-  --sidebar-ring: var(--color-indigo-600);
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1A1A1A;
+  --sidebar-primary: #ED1E28;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F2F2F3;
+  --sidebar-accent-foreground: #1A1A1A;
+  --sidebar-border: #E5E5E6;
+  --sidebar-ring: #ED1E28;
 }
 
 .dark {
@@ -90,18 +91,18 @@
   --card-foreground: var(--color-slate-100);
   --popover: var(--color-slate-900);
   --popover-foreground: var(--color-slate-100);
-  --primary: var(--color-indigo-500);
-  --primary-foreground: var(--color-white);
+  --primary: #ED1E28;
+  --primary-foreground: #FFFFFF;
   --secondary: var(--color-slate-800);
   --secondary-foreground: var(--color-slate-100);
   --muted: var(--color-slate-800);
   --muted-foreground: var(--color-slate-400);
   --accent: var(--color-slate-800);
   --accent-foreground: var(--color-slate-100);
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: #B6252A;
   --border: var(--color-slate-800);
   --input: var(--color-slate-800);
-  --ring: var(--color-indigo-500);
+  --ring: #ED1E28;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -109,12 +110,12 @@
   --chart-5: oklch(0.269 0 0);
   --sidebar: var(--color-slate-900);
   --sidebar-foreground: var(--color-slate-100);
-  --sidebar-primary: var(--color-indigo-500);
-  --sidebar-primary-foreground: var(--color-white);
+  --sidebar-primary: #ED1E28;
+  --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: var(--color-slate-800);
   --sidebar-accent-foreground: var(--color-slate-100);
   --sidebar-border: var(--color-slate-800);
-  --sidebar-ring: var(--color-indigo-500);
+  --sidebar-ring: #ED1E28;
 }
 
 @layer base {
@@ -126,5 +127,24 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Page content fade/slide-in on route change. Defined only when the user
+   hasn't asked for reduced motion -- outside this query .animate-page-in
+   has no animation at all, so content just appears instantly. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-page-in {
+    animation: page-in 180ms ease-out;
   }
 }

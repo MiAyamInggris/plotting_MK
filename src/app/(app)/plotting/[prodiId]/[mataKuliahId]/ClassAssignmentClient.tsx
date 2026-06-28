@@ -45,6 +45,7 @@ function SectionChip({
   tahunAngkatan,
   canEdit,
   dosenOptions,
+  dosenOptionsLoading,
   context,
   semesterId,
   canRegisterDlb,
@@ -58,6 +59,7 @@ function SectionChip({
   tahunAngkatan: number;
   canEdit: boolean;
   dosenOptions: DosenOption[];
+  dosenOptionsLoading: boolean;
   context: AssignContext;
   semesterId: string;
   canRegisterDlb: boolean;
@@ -86,6 +88,7 @@ function SectionChip({
         <>
           <DosenPicker
             options={dosenOptions}
+            optionsLoading={dosenOptionsLoading}
             context={context}
             semesterId={semesterId}
             canRegisterDlb={canRegisterDlb}
@@ -129,6 +132,7 @@ export default function ClassAssignmentClient({
   const [prodi, setProdi] = useState<Prodi | null>(null);
   const [mk, setMk] = useState<MataKuliahRow | null>(null);
   const [dosenOptions, setDosenOptions] = useState<DosenOption[]>([]);
+  const [dosenOptionsLoading, setDosenOptionsLoading] = useState(true);
   const [semesterWritable, setSemesterWritable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -155,6 +159,7 @@ export default function ClassAssignmentClient({
 
   async function loadDosenOptions() {
     if (!semesterId) return;
+    setDosenOptionsLoading(true);
     try {
       const res = await fetch(`/api/plotting/dosen-options?semesterPeriodeId=${semesterId}`);
       if (!res.ok) return;
@@ -162,6 +167,8 @@ export default function ClassAssignmentClient({
       setDosenOptions(data.dosen);
     } catch {
       // non-fatal
+    } finally {
+      setDosenOptionsLoading(false);
     }
   }
 
@@ -300,6 +307,7 @@ export default function ClassAssignmentClient({
                         tahunAngkatan={co.tahunAngkatan}
                         canEdit={effectiveCanEdit}
                         dosenOptions={dosenOptions}
+                        dosenOptionsLoading={dosenOptionsLoading}
                         semesterId={semesterId}
                         canRegisterDlb={canRegisterDlb}
                         context={{

@@ -40,7 +40,7 @@ export default function NavLinks({
                   className={cn(
                     "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                     active
-                      ? "bg-primary/10 font-medium text-primary"
+                      ? "bg-primary/10 font-medium text-brand-maroon"
                       : "text-foreground hover:bg-muted",
                   )}
                 >
