@@ -24,18 +24,11 @@ import { useSemester } from "@/components/SemesterContext";
 
 type Role = "ADMIN" | "KAPRODI" | "KETUA_KK";
 
-type Kelas = {
-  id: string;
-  kodeKelas: string;
-  sectionSuffix: string;
-  sks: number;
-  dosenId: string | null;
-};
+type Kelas = { id: string; kodeKelas: string; dosenId: string | null };
 type CourseOffering = {
   id: string;
   semesterKe: number;
   tahunAngkatan: number;
-  kelasPrefix: string;
   kelas: Kelas[];
 };
 type MataKuliahRow = {
@@ -49,80 +42,94 @@ type MataKuliahRow = {
 type Prodi = { id: string; kode: string; nama: string };
 type ProgramStudi = { id: string; kode: string; nama: string };
 
-type OfferingForm = { semesterKe: string; tahunAngkatan: string; kelasPrefix: string };
-const EMPTY_OFFERING_FORM: OfferingForm = { semesterKe: "", tahunAngkatan: "", kelasPrefix: "" };
+// One CourseOffering = one Kelas (Refinement 09); flattened to a single row.
+type ClassRowData = {
+  offeringId: string;
+  kelasId: string | null;
+  kodeKelas: string;
+  semesterKe: number;
+  tahunAngkatan: number;
+  dosenId: string | null;
+};
+
+type OpenForm = { semesterKe: string; tahunAngkatan: string; kodeKelas: string };
+const EMPTY_OPEN_FORM: OpenForm = { semesterKe: "", tahunAngkatan: "", kodeKelas: "" };
 
 function ClassRow({
-  kelas,
+  row,
   canWrite,
   onRemove,
   onRename,
 }: {
-  kelas: Kelas;
+  row: ClassRowData;
   canWrite: boolean;
   onRemove: () => void;
-  onRename: (newSuffix: string) => void;
+  onRename: (newKodeKelas: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [suffix, setSuffix] = useState(kelas.sectionSuffix);
-  const plotted = kelas.dosenId !== null;
-
-  if (editing) {
-    return (
-      <div className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-xs">
-        <Input
-          autoFocus
-          value={suffix}
-          onChange={(e) => setSuffix(e.target.value)}
-          className="h-6 w-20 px-1.5 text-xs"
-        />
-        <Button
-          variant="outline"
-          size="icon-sm"
-          className="size-6"
-          onClick={() => {
-            onRename(suffix);
-            setEditing(false);
-          }}
-        >
-          <Check className="size-3" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          className="size-6"
-          onClick={() => {
-            setSuffix(kelas.sectionSuffix);
-            setEditing(false);
-          }}
-        >
-          <X className="size-3" />
-        </Button>
-      </div>
-    );
-  }
+  const [code, setCode] = useState(row.kodeKelas);
+  const plotted = row.dosenId !== null;
 
   return (
-    <div className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-xs">
-      <span className="font-mono text-muted-foreground">{kelas.sectionSuffix}</span>
-      <Badge variant={plotted ? "default" : "secondary"} className="text-[10px]">
-        {plotted ? "Sudah di-plotting" : "Belum di-plotting"}
-      </Badge>
-      {canWrite && !plotted && (
+    <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm">
+      <span className="text-xs text-muted-foreground">
+        Sem {row.semesterKe} · Angkatan {row.tahunAngkatan}
+      </span>
+
+      {editing ? (
         <>
-          <Button variant="outline" size="icon-sm" className="size-6" onClick={() => setEditing(true)}>
-            <Pencil className="size-3" />
-          </Button>
-          <ConfirmDialog
-            trigger={
-              <Button variant="outline" size="icon-sm" className="size-6 text-destructive">
-                <Trash2 className="size-3" />
-              </Button>
-            }
-            title="Remove this class?"
-            description={`Class ${kelas.kodeKelas} will be permanently removed. This cannot be undone.`}
-            onConfirm={onRemove}
+          <Input
+            autoFocus
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            className="h-7 w-40 text-xs"
           />
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="size-6"
+            onClick={() => {
+              onRename(code);
+              setEditing(false);
+            }}
+          >
+            <Check className="size-3" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="size-6"
+            onClick={() => {
+              setCode(row.kodeKelas);
+              setEditing(false);
+            }}
+          >
+            <X className="size-3" />
+          </Button>
+        </>
+      ) : (
+        <>
+          <span className="font-mono font-medium">{row.kodeKelas}</span>
+          <Badge variant={plotted ? "default" : "secondary"} className="text-[10px]">
+            {plotted ? "Sudah di-plotting" : "Belum di-plotting"}
+          </Badge>
+          {canWrite && !plotted && (
+            <>
+              <Button variant="outline" size="icon-sm" className="size-6" onClick={() => setEditing(true)}>
+                <Pencil className="size-3" />
+              </Button>
+              <ConfirmDialog
+                trigger={
+                  <Button variant="outline" size="icon-sm" className="size-6 text-destructive">
+                    <Trash2 className="size-3" />
+                  </Button>
+                }
+                title="Remove this class?"
+                description={`Class ${row.kodeKelas} will be permanently removed. This cannot be undone.`}
+                onConfirm={onRemove}
+              />
+            </>
+          )}
         </>
       )}
     </div>
@@ -151,8 +158,7 @@ export default function SettingMkKelasClient({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const [offeringForms, setOfferingForms] = useState<Record<string, OfferingForm>>({});
-  const [classForms, setClassForms] = useState<Record<string, string>>({});
+  const [openForms, setOpenForms] = useState<Record<string, OpenForm>>({});
 
   async function load() {
     if (!selectedProdiId || !semesterId) {
@@ -181,13 +187,24 @@ export default function SettingMkKelasClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProdiId, semesterId]);
 
-  function offeringForm(mkId: string) {
-    return offeringForms[mkId] ?? EMPTY_OFFERING_FORM;
+  function openForm(mkId: string) {
+    return openForms[mkId] ?? EMPTY_OPEN_FORM;
   }
 
-  async function openOffering(mkId: string, e: FormEvent) {
+  function classRows(mk: MataKuliahRow): ClassRowData[] {
+    return mk.courseOfferings.map((co) => ({
+      offeringId: co.id,
+      kelasId: co.kelas[0]?.id ?? null,
+      kodeKelas: co.kelas[0]?.kodeKelas ?? "",
+      semesterKe: co.semesterKe,
+      tahunAngkatan: co.tahunAngkatan,
+      dosenId: co.kelas[0]?.dosenId ?? null,
+    }));
+  }
+
+  async function openClass(mkId: string, e: FormEvent) {
     e.preventDefault();
-    const form = offeringForm(mkId);
+    const form = openForm(mkId);
     try {
       const res = await fetch("/api/course-offerings", {
         method: "POST",
@@ -196,61 +213,25 @@ export default function SettingMkKelasClient({
           mataKuliahId: mkId,
           semesterKe: Number(form.semesterKe),
           tahunAngkatan: Number(form.tahunAngkatan),
-          kelasPrefix: form.kelasPrefix,
+          kodeKelas: form.kodeKelas,
           semesterPeriodeId: semesterId,
         }),
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(typeof data.error === "string" ? data.error : "Failed to open Mata Kuliah");
+        throw new Error(typeof data.error === "string" ? data.error : "Failed to open class");
       }
-      setOfferingForms((prev) => ({ ...prev, [mkId]: EMPTY_OFFERING_FORM }));
-      toast.success("Mata Kuliah opened for this semester");
+      setOpenForms((prev) => ({ ...prev, [mkId]: EMPTY_OPEN_FORM }));
+      toast.success("Class opened");
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to open Mata Kuliah");
+      toast.error(e instanceof Error ? e.message : "Failed to open class");
     }
   }
 
-  async function unopenOffering(id: string) {
+  async function removeClass(offeringId: string) {
     try {
-      const res = await fetch(`/api/course-offerings/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(typeof data.error === "string" ? data.error : "Failed to un-open");
-      }
-      toast.success("Offering removed");
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to un-open");
-    }
-  }
-
-  async function addClass(courseOfferingId: string, e: FormEvent) {
-    e.preventDefault();
-    const suffix = classForms[courseOfferingId]?.trim();
-    if (!suffix) return;
-    try {
-      const res = await fetch("/api/plotting/kelas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseOfferingId, sectionSuffix: suffix }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(typeof data.error === "string" ? data.error : "Failed to add class");
-      }
-      setClassForms((prev) => ({ ...prev, [courseOfferingId]: "" }));
-      toast.success("Class added");
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to add class");
-    }
-  }
-
-  async function removeClass(id: string) {
-    try {
-      const res = await fetch(`/api/plotting/kelas/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/course-offerings/${offeringId}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(typeof data.error === "string" ? data.error : "Failed to remove class");
@@ -262,12 +243,12 @@ export default function SettingMkKelasClient({
     }
   }
 
-  async function renameClass(id: string, sectionSuffix: string) {
+  async function renameClass(kelasId: string, kodeKelas: string) {
     try {
-      const res = await fetch(`/api/plotting/kelas/${id}`, {
+      const res = await fetch(`/api/plotting/kelas/${kelasId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sectionSuffix }),
+        body: JSON.stringify({ kodeKelas }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -326,16 +307,15 @@ export default function SettingMkKelasClient({
               <TableHead className="sticky top-0 bg-card">Kode MK</TableHead>
               <TableHead className="sticky top-0 bg-card">Nama</TableHead>
               <TableHead className="sticky top-0 bg-card text-right">SKS</TableHead>
-              <TableHead className="sticky top-0 bg-card text-right">Offerings</TableHead>
               <TableHead className="sticky top-0 bg-card text-right">Kelas</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableSkeleton columns={6} />
+              <TableSkeleton columns={5} />
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={5}>
                   <EmptyState
                     icon={Settings2}
                     title="No Mata Kuliah in the catalog"
@@ -346,7 +326,7 @@ export default function SettingMkKelasClient({
             ) : (
               items.map((mk) => {
                 const expanded = expandedId === mk.id;
-                const totalKelas = mk.courseOfferings.reduce((sum, co) => sum + co.kelas.length, 0);
+                const rows = classRows(mk);
                 return (
                   <Fragment key={mk.id}>
                     <TableRow
@@ -363,74 +343,32 @@ export default function SettingMkKelasClient({
                       <TableCell className="font-medium">{mk.kodeMK}</TableCell>
                       <TableCell>{mk.nama}</TableCell>
                       <TableCell className="text-right">{mk.sks}</TableCell>
-                      <TableCell className="text-right">{mk.courseOfferings.length}</TableCell>
-                      <TableCell className="text-right">{totalKelas}</TableCell>
+                      <TableCell className="text-right">{rows.length}</TableCell>
                     </TableRow>
                     {expanded && (
                       <TableRow className="bg-muted/30 hover:bg-muted/30">
-                        <TableCell colSpan={6} className="space-y-4 p-4">
-                          {mk.courseOfferings.length === 0 ? (
+                        <TableCell colSpan={5} className="space-y-4 p-4">
+                          {rows.length === 0 ? (
                             <p className="text-sm text-muted-foreground">
                               Not opened for this semester yet.
                             </p>
                           ) : (
-                            mk.courseOfferings.map((co) => (
-                              <div key={co.id} className="space-y-2 rounded-md border border-border p-3">
-                                <div className="flex items-center justify-between gap-3">
-                                  <p className="text-sm font-medium text-foreground">
-                                    Semester {co.semesterKe} · Angkatan {co.tahunAngkatan} · Prefix{" "}
-                                    {co.kelasPrefix}
-                                  </p>
-                                  {canWrite && co.kelas.length === 0 && (
-                                    <ConfirmDialog
-                                      trigger={
-                                        <Button variant="outline" size="sm" className="text-destructive">
-                                          Un-open
-                                        </Button>
-                                      }
-                                      title="Un-open this Mata Kuliah?"
-                                      description="This removes the offering for this semester. This cannot be undone."
-                                      onConfirm={() => unopenOffering(co.id)}
-                                    />
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {co.kelas.map((k) => (
-                                    <ClassRow
-                                      key={k.id}
-                                      kelas={k}
-                                      canWrite={canWrite}
-                                      onRemove={() => removeClass(k.id)}
-                                      onRename={(suffix) => renameClass(k.id, suffix)}
-                                    />
-                                  ))}
-                                </div>
-                                {canWrite && (
-                                  <form
-                                    onSubmit={(e) => addClass(co.id, e)}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <Input
-                                      placeholder="new suffix, e.g. 01"
-                                      className="h-7 w-32 text-xs"
-                                      value={classForms[co.id] ?? ""}
-                                      onChange={(e) =>
-                                        setClassForms((prev) => ({ ...prev, [co.id]: e.target.value }))
-                                      }
-                                    />
-                                    <Button type="submit" variant="outline" size="sm" className="h-7 text-xs">
-                                      <Plus className="size-3" />
-                                      Add class
-                                    </Button>
-                                  </form>
-                                )}
-                              </div>
-                            ))
+                            <div className="space-y-2">
+                              {rows.map((row) => (
+                                <ClassRow
+                                  key={row.offeringId}
+                                  row={row}
+                                  canWrite={canWrite}
+                                  onRemove={() => removeClass(row.offeringId)}
+                                  onRename={(code) => row.kelasId && renameClass(row.kelasId, code)}
+                                />
+                              ))}
+                            </div>
                           )}
 
                           {canWrite && (
                             <form
-                              onSubmit={(e) => openOffering(mk.id, e)}
+                              onSubmit={(e) => openClass(mk.id, e)}
                               className="flex flex-wrap items-end gap-3"
                             >
                               <div className="space-y-1.5">
@@ -439,11 +377,11 @@ export default function SettingMkKelasClient({
                                   required
                                   type="number"
                                   className="w-24"
-                                  value={offeringForm(mk.id).semesterKe}
+                                  value={openForm(mk.id).semesterKe}
                                   onChange={(e) =>
-                                    setOfferingForms((prev) => ({
+                                    setOpenForms((prev) => ({
                                       ...prev,
-                                      [mk.id]: { ...offeringForm(mk.id), semesterKe: e.target.value },
+                                      [mk.id]: { ...openForm(mk.id), semesterKe: e.target.value },
                                     }))
                                   }
                                 />
@@ -454,33 +392,33 @@ export default function SettingMkKelasClient({
                                   required
                                   type="number"
                                   className="w-28"
-                                  value={offeringForm(mk.id).tahunAngkatan}
+                                  value={openForm(mk.id).tahunAngkatan}
                                   onChange={(e) =>
-                                    setOfferingForms((prev) => ({
+                                    setOpenForms((prev) => ({
                                       ...prev,
-                                      [mk.id]: { ...offeringForm(mk.id), tahunAngkatan: e.target.value },
+                                      [mk.id]: { ...openForm(mk.id), tahunAngkatan: e.target.value },
                                     }))
                                   }
                                 />
                               </div>
                               <div className="space-y-1.5">
-                                <Label className="text-xs">Kelas prefix</Label>
+                                <Label className="text-xs">Kelas</Label>
                                 <Input
                                   required
-                                  placeholder="S1IF-10-"
+                                  placeholder="S1IF-10-01"
                                   className="w-40"
-                                  value={offeringForm(mk.id).kelasPrefix}
+                                  value={openForm(mk.id).kodeKelas}
                                   onChange={(e) =>
-                                    setOfferingForms((prev) => ({
+                                    setOpenForms((prev) => ({
                                       ...prev,
-                                      [mk.id]: { ...offeringForm(mk.id), kelasPrefix: e.target.value },
+                                      [mk.id]: { ...openForm(mk.id), kodeKelas: e.target.value },
                                     }))
                                   }
                                 />
                               </div>
                               <Button type="submit" variant="outline" size="sm">
                                 <Plus className="size-4" />
-                                {mk.courseOfferings.length === 0 ? "Open for this semester" : "Open another offering"}
+                                {rows.length === 0 ? "Open this MK for this semester" : "Open another class"}
                               </Button>
                             </form>
                           )}

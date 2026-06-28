@@ -31,14 +31,25 @@ export async function POST(request: Request) {
   const { semester } = semesterResult;
 
   try {
+    // One offering = one class (Refinement 09): created together so there's
+    // never a 0- or multi-class offering. sectionSuffix is a fixed internal
+    // placeholder -- kodeKelas (== kelasPrefix here) is the only code shown.
     const created = await prisma.courseOffering.create({
       data: {
         mataKuliahId: parsed.data.mataKuliahId,
         semesterKe: parsed.data.semesterKe,
         tahunAngkatan: parsed.data.tahunAngkatan,
-        kelasPrefix: parsed.data.kelasPrefix,
+        kelasPrefix: parsed.data.kodeKelas,
         prodiId: mataKuliah.prodiId,
         semesterPeriodeId: semester.id,
+        kelas: {
+          create: {
+            semesterPeriodeId: semester.id,
+            kodeKelas: parsed.data.kodeKelas,
+            sectionSuffix: "1",
+            sks: mataKuliah.sks,
+          },
+        },
       },
       include: { kelas: true },
     });
@@ -47,7 +58,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json(
-        { error: "An offering with this kelas prefix already exists for this Mata Kuliah" },
+        { error: "A class with this code already exists for this Mata Kuliah this semester" },
         { status: 409 },
       );
     }

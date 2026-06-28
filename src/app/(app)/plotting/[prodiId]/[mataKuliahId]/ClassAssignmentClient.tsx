@@ -17,7 +17,6 @@ type Dosen = { id: string; kode: string; nama: string; kkId: string | null; akti
 type Kelas = {
   id: string;
   kodeKelas: string;
-  sectionSuffix: string;
   sks: number;
   dosenId: string | null;
   dosen: Dosen | null;
@@ -27,7 +26,6 @@ type CourseOffering = {
   id: string;
   semesterKe: number;
   tahunAngkatan: number;
-  kelasPrefix: string;
   kelas: Kelas[];
 };
 type MataKuliahRow = {
@@ -43,6 +41,8 @@ type RuleWarning = { level: "error" | "warning"; code: string; message: string }
 
 function SectionChip({
   kelas,
+  semesterKe,
+  tahunAngkatan,
   canEdit,
   dosenOptions,
   context,
@@ -54,6 +54,8 @@ function SectionChip({
   saving,
 }: {
   kelas: Kelas;
+  semesterKe: number;
+  tahunAngkatan: number;
   canEdit: boolean;
   dosenOptions: DosenOption[];
   context: AssignContext;
@@ -66,7 +68,10 @@ function SectionChip({
 }) {
   return (
     <div className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-xs">
-      <span className="font-mono text-muted-foreground">{kelas.sectionSuffix}</span>
+      <span className="text-muted-foreground">
+        Sem {semesterKe} · Angkatan {tahunAngkatan}
+      </span>
+      <span className="font-mono font-medium">{kelas.kodeKelas}</span>
       <span className={kelas.dosen ? "text-foreground" : "text-muted-foreground italic"}>
         {kelas.dosen ? `${kelas.dosen.kode} — ${kelas.dosen.nama}` : "unassigned"}
       </span>
@@ -270,29 +275,29 @@ export default function ClassAssignmentClient({
           </CardContent>
         </Card>
       ) : (
-        [...mk.courseOfferings]
-          .sort((a, b) => b.tahunAngkatan - a.tahunAngkatan || a.semesterKe - b.semesterKe)
-          .map((co) => (
-            <Card key={co.id}>
-              <CardContent>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-medium text-foreground">
-                    Semester {co.semesterKe} | Tahun Angkatan {co.tahunAngkatan}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    ({mk.sks} sks{mk.ket ? `, ${mk.ket}` : ""})
-                  </span>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {co.kelas.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      No classes opened yet for this offering.
-                    </p>
-                  ) : (
+        <Card>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className="font-medium text-foreground">
+                {mk.kodeMK} — {mk.nama}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                ({mk.sks} sks{mk.ket ? `, ${mk.ket}` : ""})
+              </span>
+            </div>
+            <div className="mt-2 flex flex-col gap-2">
+              {mk.courseOfferings.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No classes opened yet for this Mata Kuliah.</p>
+              ) : (
+                [...mk.courseOfferings]
+                  .sort((a, b) => b.tahunAngkatan - a.tahunAngkatan || a.semesterKe - b.semesterKe)
+                  .flatMap((co) =>
                     co.kelas.map((k) => (
                       <SectionChip
                         key={k.id}
                         kelas={k}
+                        semesterKe={co.semesterKe}
+                        tahunAngkatan={co.tahunAngkatan}
                         canEdit={effectiveCanEdit}
                         dosenOptions={dosenOptions}
                         semesterId={semesterId}
@@ -310,12 +315,12 @@ export default function ClassAssignmentClient({
                         onDlbRegistered={addDlbOption}
                         saving={savingKelasId === k.id}
                       />
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                    )),
+                  )
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

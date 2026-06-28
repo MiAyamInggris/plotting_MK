@@ -40,6 +40,9 @@ export async function PATCH(
   return NextResponse.json({ courseOffering: updated });
 }
 
+// One offering = one class (Refinement 09) -- removing a class IS removing
+// its offering, so this single endpoint serves as both "un-open" and
+// "remove class".
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -47,12 +50,21 @@ export async function DELETE(
   const user = await getSessionUser();
   const { id } = await params;
 
-  const existing = await prisma.courseOffering.findUnique({ where: { id } });
+  const existing = await prisma.courseOffering.findUnique({
+    where: { id },
+    include: { kelas: true },
+  });
   if (!existing) {
     return NextResponse.json({ error: "Course offering not found" }, { status: 404 });
   }
   if (!canEditCourses(user, existing.prodiId)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (existing.kelas.some((k) => k.dosenId)) {
+    return NextResponse.json(
+      { error: "Cannot remove: this class is already plotted. Clear the dosen assignment first." },
+      { status: 409 },
+    );
   }
 
   const semesterResult = await resolveWritableSemester(user, existing.semesterPeriodeId);
@@ -60,14 +72,10 @@ export async function DELETE(
     return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
   }
 
-  try {
-    await prisma.courseOffering.delete({ where: { id } });
-  } catch {
-    return NextResponse.json(
-      { error: "Cannot delete: this offering still has class sections" },
-      { status: 409 },
-    );
-  }
+  await prisma.$transaction([
+    prisma.kelas.deleteMany({ where: { courseOfferingId: id } }),
+    prisma.courseOffering.delete({ where: { id } }),
+  ]);
 
   return NextResponse.json({ ok: true });
 }

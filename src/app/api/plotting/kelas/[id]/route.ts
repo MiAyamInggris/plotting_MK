@@ -30,9 +30,11 @@ export async function PATCH(
   const body = await request.json();
 
   // Two independent operations share this endpoint: assigning/clearing a
-  // dosen (Ketua KK / canPlot) and renaming a class's section code
-  // (Kaprodi / canEditCourses) -- distinguished by which field is present.
-  if (typeof body === "object" && body !== null && "sectionSuffix" in body) {
+  // dosen (Ketua KK / canPlot) and renaming a class's code (Kaprodi /
+  // canEditCourses) -- distinguished by which field is present. One
+  // offering = one class (Refinement 09), so renaming updates both the
+  // Kelas and its parent CourseOffering's kelasPrefix together.
+  if (typeof body === "object" && body !== null && "kodeKelas" in body) {
     const parsed = updateKelasSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -48,18 +50,21 @@ export async function PATCH(
     }
 
     try {
-      const updated = await prisma.kelas.update({
-        where: { id },
-        data: {
-          sectionSuffix: parsed.data.sectionSuffix,
-          kodeKelas: `${existing.courseOffering.kelasPrefix}${parsed.data.sectionSuffix}`,
-        },
-      });
+      const [updated] = await prisma.$transaction([
+        prisma.kelas.update({
+          where: { id },
+          data: { kodeKelas: parsed.data.kodeKelas },
+        }),
+        prisma.courseOffering.update({
+          where: { id: existing.courseOfferingId },
+          data: { kelasPrefix: parsed.data.kodeKelas },
+        }),
+      ]);
       return NextResponse.json({ kelas: updated });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         return NextResponse.json(
-          { error: "A section with this suffix already exists for this offering" },
+          { error: "A class with this code already exists for this Mata Kuliah this semester" },
           { status: 409 },
         );
       }
@@ -124,37 +129,4 @@ export async function PATCH(
   });
 
   return NextResponse.json({ kelas: updated, warnings });
-}
-
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const user = await getSessionUser();
-  const { id } = await params;
-
-  const existing = await prisma.kelas.findUnique({
-    where: { id },
-    include: { courseOffering: true },
-  });
-  if (!existing) {
-    return NextResponse.json({ error: "Kelas not found" }, { status: 404 });
-  }
-  if (!canEditCourses(user, existing.courseOffering.prodiId)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-  if (existing.dosenId) {
-    return NextResponse.json(
-      { error: "Cannot remove: this class is already plotted. Clear the dosen assignment first." },
-      { status: 409 },
-    );
-  }
-
-  const semesterResult = await resolveWritableSemester(user, existing.semesterPeriodeId);
-  if (!semesterResult.ok) {
-    return NextResponse.json({ error: semesterResult.error }, { status: semesterResult.status });
-  }
-
-  await prisma.kelas.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
 }

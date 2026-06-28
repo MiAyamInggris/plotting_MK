@@ -14,7 +14,6 @@ type Dosen = { id: string; kode: string; nama: string };
 type Kelas = {
   id: string;
   kodeKelas: string;
-  sectionSuffix: string;
   sks: number;
   dosenId: string | null;
   dosen: Dosen | null;
@@ -125,7 +124,7 @@ export default function MataKuliahListClient({ prodiId }: { prodiId: string }) {
                         key={k.id}
                         className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs"
                       >
-                        <span className="font-mono text-muted-foreground">{k.sectionSuffix}</span>
+                        <span className="font-mono text-muted-foreground">{k.kodeKelas}</span>
                         {k.dosen ? (
                           <span className="text-foreground">
                             {k.dosen.kode} — {k.dosen.nama}
