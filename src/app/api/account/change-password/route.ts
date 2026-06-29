@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { changePasswordSchema } from "@/lib/validation/auth";
+import { logActivity } from "@/lib/activityLog";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -30,6 +31,15 @@ export async function POST(request: Request) {
   await prisma.user.update({
     where: { id: user.id },
     data: { passwordHash, mustChangePassword: false },
+  });
+
+  await logActivity({
+    user,
+    action: "PASSWORD_RESET",
+    entityType: "User",
+    entityId: user.id,
+    detail: "Self-service password change",
+    request,
   });
 
   return NextResponse.json({ ok: true });

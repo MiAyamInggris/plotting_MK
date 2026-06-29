@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canManageMasterData } from "@/lib/authz";
 import { updateKelompokKeahlianSchema } from "@/lib/validation/kelompokKeahlian";
+import { logActivity } from "@/lib/activityLog";
 
 export async function PATCH(
   request: Request,
@@ -23,6 +24,15 @@ export async function PATCH(
   const updated = await prisma.kelompokKeahlian.update({
     where: { id },
     data: parsed.data,
+  });
+
+  await logActivity({
+    user: user!,
+    action: "UPDATE",
+    entityType: "KelompokKeahlian",
+    entityId: id,
+    detail: updated.nama,
+    request,
   });
 
   return NextResponse.json({ kelompokKeahlian: updated });

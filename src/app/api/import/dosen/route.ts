@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/session";
 import { canManageMasterData } from "@/lib/authz";
 import { validateImportFile } from "@/lib/import/fileValidation";
 import { importDosenMaster } from "@/lib/import/dosenMaster";
+import { logActivity } from "@/lib/activityLog";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -25,6 +26,13 @@ export async function POST(request: Request) {
 
   try {
     const report = await importDosenMaster(buffer);
+    await logActivity({
+      user: user!,
+      action: "IMPORT",
+      entityType: "Dosen",
+      detail: JSON.stringify(report.counts),
+      request,
+    });
     return NextResponse.json({ report });
   } catch (error) {
     return NextResponse.json(

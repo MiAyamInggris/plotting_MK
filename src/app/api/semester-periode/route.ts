@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/session";
 import { canManageSemesters } from "@/lib/authz";
 import { listSemestersFor } from "@/lib/semester";
 import { createSemesterPeriodeSchema } from "@/lib/validation/semesterPeriode";
+import { logActivity } from "@/lib/activityLog";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -29,6 +30,15 @@ export async function POST(request: Request) {
 
   const created = await prisma.semesterPeriode.create({
     data: { ...parsed.data, aktif: false, visibleToScopedRoles: false },
+  });
+
+  await logActivity({
+    user: user!,
+    action: "CREATE",
+    entityType: "SemesterPeriode",
+    entityId: created.id,
+    detail: created.nama,
+    request,
   });
 
   return NextResponse.json({ semesterPeriode: created }, { status: 201 });

@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/session";
 import { canEditCourses } from "@/lib/authz";
 import { validateImportFile } from "@/lib/import/fileValidation";
 import { importMataKuliahCatalog } from "@/lib/import/mataKuliahCatalog";
+import { logActivity } from "@/lib/activityLog";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -30,6 +31,13 @@ export async function POST(request: Request) {
 
   try {
     const report = await importMataKuliahCatalog(buffer, prodiId);
+    await logActivity({
+      user: user!,
+      action: "IMPORT",
+      entityType: "MataKuliah",
+      detail: JSON.stringify(report.counts),
+      request,
+    });
     return NextResponse.json({ report });
   } catch (error) {
     return NextResponse.json(

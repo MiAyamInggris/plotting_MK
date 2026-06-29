@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canManageMasterData } from "@/lib/authz";
 import { createKelompokKeahlianSchema } from "@/lib/validation/kelompokKeahlian";
+import { logActivity } from "@/lib/activityLog";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -37,5 +38,13 @@ export async function POST(request: Request) {
   }
 
   const created = await prisma.kelompokKeahlian.create({ data: parsed.data });
+  await logActivity({
+    user: user!,
+    action: "CREATE",
+    entityType: "KelompokKeahlian",
+    entityId: created.id,
+    detail: created.nama,
+    request,
+  });
   return NextResponse.json({ kelompokKeahlian: created }, { status: 201 });
 }

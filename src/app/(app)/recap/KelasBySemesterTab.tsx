@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { useSemester } from "@/components/SemesterContext";
 
-type Role = "ADMIN" | "KAPRODI" | "KETUA_KK";
+type Role = "ADMIN" | "KAPRODI" | "KETUA_KK" | "ACADEMIC";
 type ProgramStudi = { id: string; kode: string; nama: string };
 
 type Item = {

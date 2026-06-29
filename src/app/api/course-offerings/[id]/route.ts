@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/session";
 import { canEditCourses } from "@/lib/authz";
 import { resolveWritableSemester } from "@/lib/semester";
 import { updateCourseOfferingSchema } from "@/lib/validation/mataKuliah";
+import { logActivity } from "@/lib/activityLog";
 
 export async function PATCH(
   request: Request,
@@ -37,6 +38,14 @@ export async function PATCH(
     include: { kelas: true },
   });
 
+  await logActivity({
+    user: user!,
+    action: "UPDATE",
+    entityType: "CourseOffering",
+    entityId: id,
+    request,
+  });
+
   return NextResponse.json({ courseOffering: updated });
 }
 
@@ -44,7 +53,7 @@ export async function PATCH(
 // its offering, so this single endpoint serves as both "un-open" and
 // "remove class".
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getSessionUser();
@@ -76,6 +85,14 @@ export async function DELETE(
     prisma.kelas.deleteMany({ where: { courseOfferingId: id } }),
     prisma.courseOffering.delete({ where: { id } }),
   ]);
+
+  await logActivity({
+    user: user!,
+    action: "DELETE",
+    entityType: "CourseOffering",
+    entityId: id,
+    request,
+  });
 
   return NextResponse.json({ ok: true });
 }

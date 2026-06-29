@@ -4,6 +4,7 @@ import path from "path";
 import { getSessionUser } from "@/lib/session";
 import { canManageMasterData } from "@/lib/authz";
 import { importDosenMaster } from "@/lib/import/dosenMaster";
+import { logActivity } from "@/lib/activityLog";
 
 // Local-development convenience: import directly from the gitignored data/
 // folder without a manual upload. Not intended for production use.
@@ -13,7 +14,7 @@ const LOCAL_PATH = path.join(
   "Data Dosen 2026_TUP_ Maret 2026.xlsx",
 );
 
-export async function POST() {
+export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!canManageMasterData(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -31,6 +32,13 @@ export async function POST() {
 
   try {
     const report = await importDosenMaster(buffer);
+    await logActivity({
+      user: user!,
+      action: "IMPORT",
+      entityType: "Dosen",
+      detail: JSON.stringify(report.counts),
+      request,
+    });
     return NextResponse.json({ report });
   } catch (error) {
     return NextResponse.json(

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canManageMasterData } from "@/lib/authz";
 import { updateDosenSchema } from "@/lib/validation/dosen";
+import { logActivity } from "@/lib/activityLog";
 
 export async function PATCH(
   request: Request,
@@ -36,6 +37,15 @@ export async function PATCH(
       ...rest,
       tmtJfa: tmtJfa !== undefined ? (tmtJfa ? new Date(tmtJfa) : null) : undefined,
     },
+  });
+
+  await logActivity({
+    user: user!,
+    action: "UPDATE",
+    entityType: "Dosen",
+    entityId: id,
+    detail: updated.kode,
+    request,
   });
 
   return NextResponse.json({ dosen: updated });

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canEditCourses } from "@/lib/authz";
 import { createMataKuliahSchema } from "@/lib/validation/mataKuliah";
+import { logActivity } from "@/lib/activityLog";
 
 // The MK catalog is master data, not semester-scoped (Refinement 08) --
 // opening a catalog MK for a semester and creating its classes happens in
@@ -53,5 +54,13 @@ export async function POST(request: Request) {
   }
 
   const created = await prisma.mataKuliah.create({ data: parsed.data });
+  await logActivity({
+    user: user!,
+    action: "CREATE",
+    entityType: "MataKuliah",
+    entityId: created.id,
+    detail: created.kodeMK,
+    request,
+  });
   return NextResponse.json({ mataKuliah: created }, { status: 201 });
 }

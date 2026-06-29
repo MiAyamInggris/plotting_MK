@@ -37,6 +37,11 @@ const PROGRAM_STUDI: { kode: string; nama: string; jenjang: Jenjang }[] = [
 const DEFAULT_ADMIN_EMAIL = "admin@local";
 const DEFAULT_ADMIN_PASSWORD = "changeme";
 
+// Shared institutional read-only account (Refinement 16) -- not tied to a
+// dosen, unlike every other non-admin role.
+const DEFAULT_ACADEMIC_EMAIL = "akademik_tup@telkomuniversity.ac.id";
+const DEFAULT_ACADEMIC_PASSWORD = "Academic123!";
+
 // Institutional "Kebutuhan SKS" targets, from row 1 of the source workbook's
 // Beban Dosen sheet. DKV is omitted: its source cell is a broken #REF! formula,
 // so an Admin should set that target manually via the Recap page.
@@ -122,6 +127,26 @@ async function main() {
     );
   } else {
     console.log("Admin user already exists, skipping.");
+  }
+
+  const existingAcademic = await prisma.user.findUnique({
+    where: { email: DEFAULT_ACADEMIC_EMAIL },
+  });
+  if (!existingAcademic) {
+    const passwordHash = await bcrypt.hash(DEFAULT_ACADEMIC_PASSWORD, 10);
+    await prisma.user.create({
+      data: {
+        email: DEFAULT_ACADEMIC_EMAIL,
+        passwordHash,
+        name: "Akademik TUP",
+        role: "ACADEMIC",
+      },
+    });
+    console.log(
+      `Seeded academic user ${DEFAULT_ACADEMIC_EMAIL} / ${DEFAULT_ACADEMIC_PASSWORD} — shared institutional account, rotate the password if needed.`,
+    );
+  } else {
+    console.log("Academic user already exists, skipping.");
   }
 }
 

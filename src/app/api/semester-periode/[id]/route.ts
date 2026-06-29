@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canManageSemesters } from "@/lib/authz";
 import { updateSemesterPeriodeSchema } from "@/lib/validation/semesterPeriode";
+import { logActivity } from "@/lib/activityLog";
 
 export async function PATCH(
   request: Request,
@@ -48,12 +49,29 @@ export async function PATCH(
         data: { ...rest, aktif: true },
       }),
     ]);
+    await logActivity({
+      user: user!,
+      action: "UPDATE",
+      entityType: "SemesterPeriode",
+      entityId: id,
+      detail: `Activated ${updated.nama}`,
+      request,
+    });
     return NextResponse.json({ semesterPeriode: updated });
   }
 
   const updated = await prisma.semesterPeriode.update({
     where: { id },
     data: rest,
+  });
+
+  await logActivity({
+    user: user!,
+    action: "UPDATE",
+    entityType: "SemesterPeriode",
+    entityId: id,
+    detail: updated.nama,
+    request,
   });
 
   return NextResponse.json({ semesterPeriode: updated });

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import MataKuliahListClient from "./MataKuliahListClient";
 
@@ -8,6 +9,7 @@ export default async function ProdiPlottingPage({
 }) {
   const { prodiId } = await params;
   const user = await getSessionUser();
+  if (user?.role === "ACADEMIC") redirect("/recap");
   const canEdit = !!user && (user.role === "ADMIN" || user.role === "KETUA_KK");
 
   return (

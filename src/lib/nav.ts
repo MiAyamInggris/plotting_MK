@@ -14,6 +14,7 @@ import {
   CalendarClock,
   UserRound,
   Settings2,
+  ScrollText,
 } from "lucide-react";
 
 export type NavGroup = "Overview" | "Master Data" | "Administration";
@@ -30,7 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: "/",
     label: "Dashboard",
-    roles: ["ADMIN", "KAPRODI", "KETUA_KK"],
+    roles: ["ADMIN", "KAPRODI", "KETUA_KK", "ACADEMIC"],
     icon: LayoutDashboard,
     group: "Overview",
   },
@@ -44,7 +45,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: "/recap",
     label: "Recap",
-    roles: ["ADMIN", "KAPRODI", "KETUA_KK"],
+    roles: ["ADMIN", "KAPRODI", "KETUA_KK", "ACADEMIC"],
     icon: BarChart3,
     group: "Overview",
   },
@@ -109,6 +110,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Users",
     roles: ["ADMIN"],
     icon: UserCog,
+    group: "Administration",
+  },
+  {
+    href: "/logs",
+    label: "Activity Logs",
+    roles: ["ADMIN"],
+    icon: ScrollText,
     group: "Administration",
   },
   {

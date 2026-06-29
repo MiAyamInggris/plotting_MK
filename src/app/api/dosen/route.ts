@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canManageMasterData } from "@/lib/authz";
 import { createDosenSchema } from "@/lib/validation/dosen";
+import { logActivity } from "@/lib/activityLog";
 
 export async function GET(request: Request) {
   const user = await getSessionUser();
@@ -87,6 +88,15 @@ export async function POST(request: Request) {
       ...rest,
       tmtJfa: tmtJfa ? new Date(tmtJfa) : null,
     },
+  });
+
+  await logActivity({
+    user: user!,
+    action: "CREATE",
+    entityType: "Dosen",
+    entityId: created.id,
+    detail: created.kode,
+    request,
   });
 
   return NextResponse.json({ dosen: created }, { status: 201 });

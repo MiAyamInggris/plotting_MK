@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/session";
 import { canEditCourses } from "@/lib/authz";
 import { resolveWritableSemester } from "@/lib/semester";
 import { createCourseOfferingSchema } from "@/lib/validation/mataKuliah";
+import { logActivity } from "@/lib/activityLog";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -52,6 +53,15 @@ export async function POST(request: Request) {
         },
       },
       include: { kelas: true },
+    });
+
+    await logActivity({
+      user: user!,
+      action: "OPEN_CLASS",
+      entityType: "CourseOffering",
+      entityId: created.id,
+      detail: parsed.data.kodeKelas,
+      request,
     });
 
     return NextResponse.json({ courseOffering: created }, { status: 201 });

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { listSemestersFor } from "@/lib/semester";
 import type { AuthUser } from "@/lib/authz";
+import { applyImpersonationOverlay, readImpersonationCookie } from "@/lib/impersonation";
 
 // Shared by every authenticated route group's layout: resolves the session,
 // bounces to /login if absent, and forces /change-password before anything
@@ -20,7 +21,8 @@ export async function requireSessionUser() {
   });
   if (dbUser?.mustChangePassword) redirect("/change-password");
 
-  return session.user;
+  const impersonationState = await readImpersonationCookie();
+  return applyImpersonationOverlay(session.user, impersonationState);
 }
 
 export async function getAppShellProps(user: AuthUser) {
@@ -38,7 +40,7 @@ export async function getAppShellProps(user: AuthUser) {
       select: { nama: true },
     });
     scopeLabel = kk?.nama ?? null;
-  } else if (user.role === "ADMIN") {
+  } else if (user.role === "ADMIN" || user.role === "ACADEMIC") {
     scopeLabel = "All Program Studi";
   } else if (user.role === "DOSEN" && user.dosenId) {
     const dosen = await prisma.dosen.findUnique({

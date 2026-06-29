@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canManageUsers } from "@/lib/authz";
 import { deriveDefaultPassword } from "@/lib/dosenAccounts";
+import { logActivity } from "@/lib/activityLog";
 
 export async function POST(
   request: Request,
@@ -34,6 +35,15 @@ export async function POST(
   await prisma.user.update({
     where: { id },
     data: { passwordHash, mustChangePassword: true },
+  });
+
+  await logActivity({
+    user: user!,
+    action: "PASSWORD_RESET",
+    entityType: "User",
+    entityId: id,
+    detail: `Reset to NIP-based default for ${existing.dosen.kode}`,
+    request,
   });
 
   return NextResponse.json({ success: true });

@@ -1,8 +1,10 @@
+import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import ProdiListClient from "./ProdiListClient";
 
 export default async function PlottingPage() {
   const user = await getSessionUser();
+  if (user?.role === "ACADEMIC") redirect("/recap");
   const canEdit = !!user && (user.role === "ADMIN" || user.role === "KETUA_KK");
 
   return (

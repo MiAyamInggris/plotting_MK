@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import NavLinks from "@/components/NavLinks";
 import UserMenu from "@/components/UserMenu";
 import SemesterPicker from "@/components/SemesterPicker";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { SemesterProvider, type SemesterOption } from "@/components/SemesterContext";
 import { navItemForPath } from "@/lib/nav";
 
@@ -17,12 +18,14 @@ export default function AppShell({
   role,
   scopeLabel,
   semesters,
+  impersonation,
   children,
 }: {
   name: string;
   role: Role;
   scopeLabel: string | null;
   semesters: SemesterOption[];
+  impersonation?: { impersonatedRole: Role; impersonatedScopeLabel: string | null } | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -31,45 +34,53 @@ export default function AppShell({
 
   return (
     <SemesterProvider semesters={semesters}>
-      <div className="flex min-h-screen bg-background">
-        <aside className="hidden w-64 shrink-0 flex-col gap-6 border-r border-border bg-card p-4 lg:flex">
-          <div className="px-3 py-2">
-            <p className="text-lg font-semibold text-foreground">Plotting MK</p>
-          </div>
-          <NavLinks role={role} />
-        </aside>
-
-        <div className="flex flex-1 flex-col">
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-border bg-background px-4 lg:px-6">
-            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="lg:hidden">
-                  <Menu className="size-4" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
-                <SheetHeader className="border-b border-border">
-                  <SheetTitle>Plotting MK</SheetTitle>
-                </SheetHeader>
-                <div className="flex-1 overflow-y-auto p-4">
-                  <NavLinks role={role} onNavigate={() => setMobileOpen(false)} />
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            <h1 className="flex-1 truncate text-lg font-medium text-foreground">{title}</h1>
-
-            <SemesterPicker />
-
-            <UserMenu name={name} role={role} scopeLabel={scopeLabel} />
-          </header>
-
-          <main className="flex-1 p-6 lg:p-8">
-            <div key={pathname} className="mx-auto w-full max-w-7xl animate-page-in">
-              {children}
+      <div className="flex min-h-screen flex-col bg-background">
+        {impersonation && (
+          <ImpersonationBanner
+            role={impersonation.impersonatedRole}
+            scopeLabel={impersonation.impersonatedScopeLabel}
+          />
+        )}
+        <div className="flex flex-1">
+          <aside className="hidden w-64 shrink-0 flex-col gap-6 border-r border-border bg-card p-4 lg:flex">
+            <div className="px-3 py-2">
+              <p className="text-lg font-semibold text-foreground">Plotting MK</p>
             </div>
-          </main>
+            <NavLinks role={role} />
+          </aside>
+
+          <div className="flex flex-1 flex-col">
+            <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-border bg-background px-4 lg:px-6">
+              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="lg:hidden">
+                    <Menu className="size-4" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-72 p-0">
+                  <SheetHeader className="border-b border-border">
+                    <SheetTitle>Plotting MK</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex-1 overflow-y-auto p-4">
+                    <NavLinks role={role} onNavigate={() => setMobileOpen(false)} />
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              <h1 className="flex-1 truncate text-lg font-medium text-foreground">{title}</h1>
+
+              <SemesterPicker />
+
+              <UserMenu name={name} role={role} scopeLabel={scopeLabel} />
+            </header>
+
+            <main className="flex-1 p-6 lg:p-8">
+              <div key={pathname} className="mx-auto w-full max-w-7xl animate-page-in">
+                {children}
+              </div>
+            </main>
+          </div>
         </div>
       </div>
     </SemesterProvider>

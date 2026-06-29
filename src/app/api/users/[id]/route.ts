@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canManageUsers } from "@/lib/authz";
 import { updateUserSchema } from "@/lib/validation/user";
+import { logActivity } from "@/lib/activityLog";
 
 export async function PATCH(
   request: Request,
@@ -66,6 +67,15 @@ export async function PATCH(
       createdAt: true,
       updatedAt: true,
     },
+  });
+
+  await logActivity({
+    user: user!,
+    action: role ? "ROLE_CHANGE" : "UPDATE",
+    entityType: "User",
+    entityId: id,
+    detail: role ? `Role changed to ${role}` : undefined,
+    request,
   });
 
   return NextResponse.json({ user: updated });

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canManageMasterData } from "@/lib/authz";
 import { createCoeSchema } from "@/lib/validation/coe";
+import { logActivity } from "@/lib/activityLog";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -37,5 +38,13 @@ export async function POST(request: Request) {
   }
 
   const created = await prisma.centerOfExcellence.create({ data: parsed.data });
+  await logActivity({
+    user: user!,
+    action: "CREATE",
+    entityType: "CenterOfExcellence",
+    entityId: created.id,
+    detail: created.nama,
+    request,
+  });
   return NextResponse.json({ coe: created }, { status: 201 });
 }

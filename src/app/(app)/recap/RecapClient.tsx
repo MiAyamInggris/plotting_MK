@@ -9,7 +9,7 @@ import ProdiSummaryTab from "./ProdiSummaryTab";
 import PivotTab from "./PivotTab";
 import KelasBySemesterTab from "./KelasBySemesterTab";
 
-type Role = "ADMIN" | "KAPRODI" | "KETUA_KK";
+type Role = "ADMIN" | "KAPRODI" | "KETUA_KK" | "ACADEMIC";
 type ProgramStudi = { id: string; kode: string; nama: string };
 type KelompokKeahlian = { id: string; nama: string };
 

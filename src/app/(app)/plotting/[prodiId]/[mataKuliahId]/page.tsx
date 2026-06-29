@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import { canRegisterDlb } from "@/lib/authz";
 import ClassAssignmentClient from "./ClassAssignmentClient";
@@ -9,6 +10,7 @@ export default async function ClassAssignmentPage({
 }) {
   const { prodiId, mataKuliahId } = await params;
   const user = await getSessionUser();
+  if (user?.role === "ACADEMIC") redirect("/recap");
   const canEdit = !!user && (user.role === "ADMIN" || user.role === "KETUA_KK");
 
   return (

@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/session";
 import { canManageMasterData } from "@/lib/authz";
 import { resolveWritableSemester } from "@/lib/semester";
 import { setProdiTargetSchema } from "@/lib/validation/prodiTarget";
+import { logActivity } from "@/lib/activityLog";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -36,6 +37,15 @@ export async function POST(request: Request) {
       semesterPeriodeId: semester.id,
       kebutuhanSks: parsed.data.kebutuhanSks,
     },
+  });
+
+  await logActivity({
+    user: user!,
+    action: "UPDATE",
+    entityType: "ProdiTarget",
+    entityId: target.id,
+    detail: `kebutuhanSks=${target.kebutuhanSks}`,
+    request,
   });
 
   return NextResponse.json({ prodiTarget: target });

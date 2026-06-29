@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canRegisterDlb } from "@/lib/authz";
 import { registerDlbSchema } from "@/lib/validation/dosen";
+import { logActivity } from "@/lib/activityLog";
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
@@ -57,6 +58,15 @@ export async function POST(request: Request) {
       createdById: user!.id,
     },
     select: { id: true, kode: true, nama: true, kkId: true, aktif: true, jenis: true },
+  });
+
+  await logActivity({
+    user: user!,
+    action: "DLB_CREATE",
+    entityType: "Dosen",
+    entityId: created.id,
+    detail: created.kode,
+    request,
   });
 
   return NextResponse.json({ dosen: created }, { status: 201 });

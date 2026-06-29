@@ -18,6 +18,7 @@ export default async function AppGroupLayout({
       role={user.role}
       scopeLabel={scopeLabel}
       semesters={semesters}
+      impersonation={user.impersonation}
     >
       {children}
     </AppShell>

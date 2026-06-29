@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canEditCourses } from "@/lib/authz";
 import { updateMataKuliahSchema } from "@/lib/validation/mataKuliah";
+import { logActivity } from "@/lib/activityLog";
 
 export async function PATCH(
   request: Request,
@@ -30,11 +31,20 @@ export async function PATCH(
     data: parsed.data,
   });
 
+  await logActivity({
+    user: user!,
+    action: "UPDATE",
+    entityType: "MataKuliah",
+    entityId: id,
+    detail: updated.kodeMK,
+    request,
+  });
+
   return NextResponse.json({ mataKuliah: updated });
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getSessionUser();
@@ -56,6 +66,15 @@ export async function DELETE(
       { status: 409 },
     );
   }
+
+  await logActivity({
+    user: user!,
+    action: "DELETE",
+    entityType: "MataKuliah",
+    entityId: id,
+    detail: existing.kodeMK,
+    request,
+  });
 
   return NextResponse.json({ ok: true });
 }

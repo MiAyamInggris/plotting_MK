@@ -9,7 +9,9 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   if (user.role === "KAPRODI") return <KaprodiDashboard />;
-  if (user.role === "KETUA_KK") return <KetuaKkDashboard />;
+  // Academic gets the same all-prodi view Ketua KK sees -- it's already an
+  // unscoped, every-prodi ratio dashboard with no KK-specific filtering.
+  if (user.role === "KETUA_KK" || user.role === "ACADEMIC") return <KetuaKkDashboard />;
 
   return (
     <Card>

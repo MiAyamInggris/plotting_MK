@@ -6,6 +6,7 @@ import { canEditCourses, canPlot } from "@/lib/authz";
 import { resolveWritableSemester } from "@/lib/semester";
 import { assignDosenSchema, updateKelasSchema } from "@/lib/validation/plotting";
 import { checkCrossProdi, checkDosenActive, checkSksCap, type RuleResult } from "@/lib/validation/rules";
+import { logActivity } from "@/lib/activityLog";
 
 export async function PATCH(
   request: Request,
@@ -60,6 +61,14 @@ export async function PATCH(
           data: { kelasPrefix: parsed.data.kodeKelas },
         }),
       ]);
+      await logActivity({
+        user: user!,
+        action: "UPDATE",
+        entityType: "Kelas",
+        entityId: id,
+        detail: `Renamed to ${parsed.data.kodeKelas}`,
+        request,
+      });
       return NextResponse.json({ kelas: updated });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -128,6 +137,15 @@ export async function PATCH(
       dosen: { select: { id: true, kode: true, nama: true, kkId: true, aktif: true } },
       assignedBy: { select: { name: true } },
     },
+  });
+
+  await logActivity({
+    user: user!,
+    action: dosen ? "PLOT_ASSIGN" : "PLOT_CLEAR",
+    entityType: "Kelas",
+    entityId: id,
+    detail: dosen ? dosen.kode : null,
+    request,
   });
 
   return NextResponse.json({ kelas: updated, warnings });

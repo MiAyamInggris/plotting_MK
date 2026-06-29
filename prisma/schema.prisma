@@ -13,6 +13,22 @@ enum Role {
   KAPRODI
   KETUA_KK
   DOSEN
+  ACADEMIC
+}
+
+enum ActivityAction {
+  LOGIN
+  LOGOUT
+  CREATE
+  UPDATE
+  DELETE
+  IMPORT
+  PLOT_ASSIGN
+  PLOT_CLEAR
+  OPEN_CLASS
+  DLB_CREATE
+  ROLE_CHANGE
+  PASSWORD_RESET
 }
 
 enum SemesterTipe {
@@ -255,7 +271,32 @@ model User {
 
   registeredDlb Dosen[] @relation("DosenRegisteredBy")
   assignedKelas Kelas[] @relation("KelasAssignedBy")
+  activityLogs  ActivityLog[]
 
   @@index([prodiId])
   @@index([kkId])
+}
+
+model ActivityLog {
+  id           String         @id @default(cuid())
+  actorUserId  String
+  actor        User           @relation(fields: [actorUserId], references: [id])
+  // The effective role the action ran as -- equal to actor.role unless an
+  // Admin performed it while impersonating (Refinement 16), in which case
+  // this is the impersonated role and impersonatedRole/impersonatedScope
+  // are also set, so "show me everything done as KAPRODI" and "show me
+  // everything done via impersonation" can both be queried directly.
+  actorRole         Role
+  impersonatedRole  Role?
+  impersonatedScope String?
+  action       ActivityAction
+  entityType   String
+  entityId     String?
+  detail       String?
+  ip           String?
+  createdAt    DateTime       @default(now())
+
+  @@index([actorUserId])
+  @@index([action])
+  @@index([createdAt])
 }

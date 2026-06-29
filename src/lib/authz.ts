@@ -7,6 +7,15 @@ export type AuthUser = {
   prodiId?: string | null;
   kkId?: string | null;
   dosenId?: string | null;
+  // Set only when an ADMIN is previewing the app as another role
+  // (Refinement 16). `role`/`prodiId`/`kkId` above already hold the
+  // *effective* (impersonated) values -- every existing authz/scoping check
+  // keeps working unchanged. This is extra metadata for activity logging
+  // and for rendering the "Viewing as ..." banner/switcher.
+  impersonation?: {
+    impersonatedRole: Role;
+    impersonatedScopeLabel: string | null;
+  };
 };
 
 export function canManageUsers(user: AuthUser | null | undefined): boolean {
