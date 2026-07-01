@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { canManageMasterData } from "@/lib/authz";
+import { canCreateDosen } from "@/lib/authz";
 import { createDosenSchema } from "@/lib/validation/dosen";
 import { logActivity } from "@/lib/activityLog";
 
@@ -56,8 +56,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!canManageMasterData(user)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();
@@ -66,10 +66,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const existing = await prisma.dosen.findUnique({
+  const authResult = canCreateDosen(user, parsed.data.jenis ?? "TETAP");
+  if (!authResult.allowed) {
+    return NextResponse.json({ error: authResult.reason ?? "Forbidden" }, { status: 403 });
+  }
+
+  const existingKode = await prisma.dosen.findUnique({
     where: { kode: parsed.data.kode },
   });
-  if (existing) {
+  if (existingKode) {
     return NextResponse.json({ error: "Kode dosen already in use" }, { status: 409 });
   }
 
@@ -82,20 +87,27 @@ export async function POST(request: Request) {
     }
   }
 
-  const { tmtJfa, ...rest } = parsed.data;
+  const { tmtJfa, namaTanpaGelar, ...rest } = parsed.data;
   const created = await prisma.dosen.create({
     data: {
       ...rest,
+      // DLB forms omit namaTanpaGelar — fall back to nama automatically
+      namaTanpaGelar: namaTanpaGelar || parsed.data.nama,
       tmtJfa: tmtJfa ? new Date(tmtJfa) : null,
+      // KK: stamp their own KK and creator; DLB form doesn't send these fields
+      ...(user.role === "KETUA_KK"
+        ? { kkId: user.kkId, createdById: user.id }
+        : {}),
     },
   });
 
+  const isKk = user.role === "KETUA_KK";
   await logActivity({
-    user: user!,
-    action: "CREATE",
+    user,
+    action: isKk ? "DLB_CREATE" : "CREATE",
     entityType: "Dosen",
     entityId: created.id,
-    detail: created.kode,
+    detail: isKk ? `${created.kode} — ${created.nama}` : created.kode,
     request,
   });
 

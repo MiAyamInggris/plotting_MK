@@ -43,7 +43,7 @@ export const createDosenSchema = z.object({
     .max(10)
     .transform((v) => v.toUpperCase()),
   nama: z.string().min(1),
-  namaTanpaGelar: z.string().min(1),
+  namaTanpaGelar: z.string().min(1).optional(),
   email: z
     .string()
     .email()

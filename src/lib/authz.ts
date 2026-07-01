@@ -84,3 +84,29 @@ export function canPlot(
 export function canRegisterDlb(user: AuthUser | null | undefined): boolean {
   return user?.role === "ADMIN" || user?.role === "KETUA_KK";
 }
+
+/** Admin may create any dosen type; Ketua KK may only create DLB (R23). */
+export function canCreateDosen(
+  user: AuthUser | null | undefined,
+  jenis: string,
+): { allowed: boolean; reason?: string } {
+  if (canManageMasterData(user)) return { allowed: true };
+  if (!canRegisterDlb(user)) return { allowed: false, reason: "Forbidden" };
+  if (jenis !== "DLB") {
+    return { allowed: false, reason: "Ketua KK may only create DLB dosen" };
+  }
+  return { allowed: true };
+}
+
+/** Admin may edit any dosen record; Ketua KK may only edit DLB records (R23). */
+export function canEditDosen(
+  user: AuthUser | null | undefined,
+  existing: { jenis: string },
+): { allowed: boolean; reason?: string } {
+  if (canManageMasterData(user)) return { allowed: true };
+  if (!canRegisterDlb(user)) return { allowed: false, reason: "Forbidden" };
+  if (existing.jenis !== "DLB") {
+    return { allowed: false, reason: "Ketua KK may only edit DLB dosen" };
+  }
+  return { allowed: true };
+}

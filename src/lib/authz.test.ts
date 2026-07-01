@@ -7,6 +7,8 @@ import {
   canViewPlotting,
   canPlot,
   canRegisterDlb,
+  canCreateDosen,
+  canEditDosen,
   type AuthUser,
 } from "./authz";
 
@@ -44,6 +46,54 @@ describe("ACADEMIC is blocked from every mutation", () => {
 
   it("can still view the read-only recap/plotting dashboards", () => {
     expect(canViewPlotting(academic)).toBe(true);
+  });
+});
+
+describe("canCreateDosen — Ketua KK DLB-only restriction (R23)", () => {
+  const admin: AuthUser = { id: "a1", role: "ADMIN" };
+
+  it("Admin can create TETAP dosen", () => {
+    expect(canCreateDosen(admin, "TETAP")).toMatchObject({ allowed: true });
+  });
+
+  it("Admin can create DLB dosen", () => {
+    expect(canCreateDosen(admin, "DLB")).toMatchObject({ allowed: true });
+  });
+
+  it("Ketua KK can create DLB dosen", () => {
+    expect(canCreateDosen(ketuaKk, "DLB")).toMatchObject({ allowed: true });
+  });
+
+  it("Ketua KK is blocked from creating TETAP dosen", () => {
+    expect(canCreateDosen(ketuaKk, "TETAP")).toMatchObject({ allowed: false });
+  });
+
+  it("Unauthenticated user is blocked", () => {
+    expect(canCreateDosen(null, "DLB")).toMatchObject({ allowed: false });
+  });
+});
+
+describe("canEditDosen — Ketua KK DLB-only restriction (R23)", () => {
+  const admin: AuthUser = { id: "a1", role: "ADMIN" };
+
+  it("Admin can edit TETAP dosen", () => {
+    expect(canEditDosen(admin, { jenis: "TETAP" })).toMatchObject({ allowed: true });
+  });
+
+  it("Admin can edit DLB dosen", () => {
+    expect(canEditDosen(admin, { jenis: "DLB" })).toMatchObject({ allowed: true });
+  });
+
+  it("Ketua KK can edit DLB dosen", () => {
+    expect(canEditDosen(ketuaKk, { jenis: "DLB" })).toMatchObject({ allowed: true });
+  });
+
+  it("Ketua KK is blocked from editing TETAP dosen", () => {
+    expect(canEditDosen(ketuaKk, { jenis: "TETAP" })).toMatchObject({ allowed: false });
+  });
+
+  it("Unauthenticated user is blocked", () => {
+    expect(canEditDosen(null, { jenis: "DLB" })).toMatchObject({ allowed: false });
   });
 });
 

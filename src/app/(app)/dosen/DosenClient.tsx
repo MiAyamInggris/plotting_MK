@@ -145,6 +145,15 @@ function toPayload(f: FormState) {
   };
 }
 
+/** Build payload for DLB-only mode: jenis forced to DLB, namaTanpaGelar auto-filled from nama. */
+function toDlbPayload(f: FormState) {
+  return {
+    ...toPayload(f),
+    jenis: "DLB" as DosenJenis,
+    namaTanpaGelar: f.nama,
+  };
+}
+
 function DosenFields({
   value,
   onChange,
@@ -152,6 +161,7 @@ function DosenFields({
   kelompokKeahlian,
   coeList,
   idPrefix,
+  dlbOnly = false,
 }: {
   value: FormState;
   onChange: (next: FormState) => void;
@@ -159,6 +169,7 @@ function DosenFields({
   kelompokKeahlian: KelompokKeahlian[];
   coeList: Coe[];
   idPrefix: string;
+  dlbOnly?: boolean;
 }) {
   function set<K extends keyof FormState>(key: K, v: string) {
     onChange({ ...value, [key]: v });
@@ -185,51 +196,59 @@ function DosenFields({
           onChange={(e) => set("nama", e.target.value)}
         />
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-nama-tanpa-gelar`}>Nama tanpa gelar</Label>
-        <Input
-          id={`${idPrefix}-nama-tanpa-gelar`}
-          required
-          value={value.namaTanpaGelar}
-          onChange={(e) => set("namaTanpaGelar", e.target.value)}
-        />
-      </div>
+      {!dlbOnly && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-nama-tanpa-gelar`}>Nama tanpa gelar</Label>
+          <Input
+            id={`${idPrefix}-nama-tanpa-gelar`}
+            required
+            value={value.namaTanpaGelar}
+            onChange={(e) => set("namaTanpaGelar", e.target.value)}
+          />
+        </div>
+      )}
       <div className="space-y-1.5">
         <Label htmlFor={`${idPrefix}-email`}>Email</Label>
         <Input
           id={`${idPrefix}-email`}
           type="email"
+          required={dlbOnly}
           value={value.email}
           onChange={(e) => set("email", e.target.value)}
         />
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-jenis`}>Jenis</Label>
-        <Select value={value.jenis} onValueChange={(v) => set("jenis", v as DosenJenis)}>
-          <SelectTrigger id={`${idPrefix}-jenis`} className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {JENIS_OPTIONS.map((opt) => (
-              <SelectItem key={opt} value={opt}>
-                {opt}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-nip`}>NIP YPT</Label>
-        <Input
-          id={`${idPrefix}-nip`}
-          value={value.nipYpt}
-          onChange={(e) => set("nipYpt", e.target.value)}
-        />
-      </div>
+      {!dlbOnly && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-jenis`}>Jenis</Label>
+          <Select value={value.jenis} onValueChange={(v) => set("jenis", v as DosenJenis)}>
+            <SelectTrigger id={`${idPrefix}-jenis`} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {JENIS_OPTIONS.map((opt) => (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {!dlbOnly && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-nip`}>NIP YPT</Label>
+          <Input
+            id={`${idPrefix}-nip`}
+            value={value.nipYpt}
+            onChange={(e) => set("nipYpt", e.target.value)}
+          />
+        </div>
+      )}
       <div className="space-y-1.5">
         <Label htmlFor={`${idPrefix}-nidn`}>NIDN/NUPTK</Label>
         <Input
           id={`${idPrefix}-nidn`}
+          required={dlbOnly}
           value={value.nidn}
           onChange={(e) => set("nidn", e.target.value)}
         />
@@ -250,108 +269,123 @@ function DosenFields({
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-tmt-jfa`}>TMT JFA</Label>
-        <Input
-          id={`${idPrefix}-tmt-jfa`}
-          type="date"
-          value={value.tmtJfa}
-          onChange={(e) => set("tmtJfa", e.target.value)}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-homebase`}>Homebase Prodi</Label>
-        <Select
-          value={value.homebaseProdiId || NONE}
-          onValueChange={(v) => set("homebaseProdiId", v === NONE ? "" : v)}
-        >
-          <SelectTrigger id={`${idPrefix}-homebase`} className="w-full">
-            <SelectValue placeholder="—" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>—</SelectItem>
-            {programStudi.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.kode} — {p.nama}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-tingkat`}>Tingkat Pendidikan</Label>
-        <Select
-          value={value.tingkatPendidikan || NONE}
-          onValueChange={(v) => set("tingkatPendidikan", v === NONE ? "" : v)}
-        >
-          <SelectTrigger id={`${idPrefix}-tingkat`} className="w-full">
-            <SelectValue placeholder="—" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>—</SelectItem>
-            {TINGKAT_OPTIONS.map((opt) => (
-              <SelectItem key={opt} value={opt}>
-                {opt}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-kk`}>Kelompok Keahlian</Label>
-        <Select value={value.kkId || NONE} onValueChange={(v) => set("kkId", v === NONE ? "" : v)}>
-          <SelectTrigger id={`${idPrefix}-kk`} className="w-full">
-            <SelectValue placeholder="—" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>—</SelectItem>
-            {kelompokKeahlian.map((k) => (
-              <SelectItem key={k.id} value={k.id}>
-                {k.nama}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-coe`}>COE</Label>
-        <Select value={value.coeId || NONE} onValueChange={(v) => set("coeId", v === NONE ? "" : v)}>
-          <SelectTrigger id={`${idPrefix}-coe`} className="w-full">
-            <SelectValue placeholder="—" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>—</SelectItem>
-            {coeList.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.nama}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-beban`}>Beban Struktural</Label>
-        <Input
-          id={`${idPrefix}-beban`}
-          value={value.bebanStruktural}
-          onChange={(e) => set("bebanStruktural", e.target.value)}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-beban-sks`}>Beban Struktural (SKS)</Label>
-        <Input
-          id={`${idPrefix}-beban-sks`}
-          type="number"
-          step="0.5"
-          min="0"
-          value={value.bebanStrukturalSks}
-          onChange={(e) => set("bebanStrukturalSks", e.target.value)}
-        />
-      </div>
+      {!dlbOnly && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-tmt-jfa`}>TMT JFA</Label>
+          <Input
+            id={`${idPrefix}-tmt-jfa`}
+            type="date"
+            value={value.tmtJfa}
+            onChange={(e) => set("tmtJfa", e.target.value)}
+          />
+        </div>
+      )}
+      {!dlbOnly && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-homebase`}>Homebase Prodi</Label>
+          <Select
+            value={value.homebaseProdiId || NONE}
+            onValueChange={(v) => set("homebaseProdiId", v === NONE ? "" : v)}
+          >
+            <SelectTrigger id={`${idPrefix}-homebase`} className="w-full">
+              <SelectValue placeholder="—" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>—</SelectItem>
+              {programStudi.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.kode} — {p.nama}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {!dlbOnly && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-tingkat`}>Tingkat Pendidikan</Label>
+          <Select
+            value={value.tingkatPendidikan || NONE}
+            onValueChange={(v) => set("tingkatPendidikan", v === NONE ? "" : v)}
+          >
+            <SelectTrigger id={`${idPrefix}-tingkat`} className="w-full">
+              <SelectValue placeholder="—" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>—</SelectItem>
+              {TINGKAT_OPTIONS.map((opt) => (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {!dlbOnly && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-kk`}>Kelompok Keahlian</Label>
+          <Select value={value.kkId || NONE} onValueChange={(v) => set("kkId", v === NONE ? "" : v)}>
+            <SelectTrigger id={`${idPrefix}-kk`} className="w-full">
+              <SelectValue placeholder="—" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>—</SelectItem>
+              {kelompokKeahlian.map((k) => (
+                <SelectItem key={k.id} value={k.id}>
+                  {k.nama}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {!dlbOnly && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-coe`}>COE</Label>
+          <Select value={value.coeId || NONE} onValueChange={(v) => set("coeId", v === NONE ? "" : v)}>
+            <SelectTrigger id={`${idPrefix}-coe`} className="w-full">
+              <SelectValue placeholder="—" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>—</SelectItem>
+              {coeList.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.nama}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {!dlbOnly && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-beban`}>Beban Struktural</Label>
+          <Input
+            id={`${idPrefix}-beban`}
+            value={value.bebanStruktural}
+            onChange={(e) => set("bebanStruktural", e.target.value)}
+          />
+        </div>
+      )}
+      {!dlbOnly && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-beban-sks`}>Beban Struktural (SKS)</Label>
+          <Input
+            id={`${idPrefix}-beban-sks`}
+            type="number"
+            step="0.5"
+            min="0"
+            value={value.bebanStrukturalSks}
+            onChange={(e) => set("bebanStrukturalSks", e.target.value)}
+          />
+        </div>
+      )}
       <div className="space-y-1.5">
         <Label htmlFor={`${idPrefix}-notelp`}>No. Telp.</Label>
         <Input
           id={`${idPrefix}-notelp`}
+          required={dlbOnly}
           value={value.noTelp}
           onChange={(e) => set("noTelp", e.target.value)}
         />
@@ -360,6 +394,7 @@ function DosenFields({
         <Label htmlFor={`${idPrefix}-homebase-univ`}>Homebase Univ. (DLB)</Label>
         <Input
           id={`${idPrefix}-homebase-univ`}
+          required={dlbOnly}
           value={value.homebaseUniv}
           onChange={(e) => set("homebaseUniv", e.target.value)}
         />
@@ -368,7 +403,15 @@ function DosenFields({
   );
 }
 
-export default function DosenClient({ canEdit }: { canEdit: boolean }) {
+export default function DosenClient({
+  canEdit,
+  canAddDlb,
+}: {
+  canEdit: boolean;
+  canAddDlb: boolean;
+}) {
+  const dlbOnly = canAddDlb && !canEdit;
+
   const [items, setItems] = useState<Dosen[]>([]);
   const [programStudi, setProgramStudi] = useState<ProgramStudi[]>([]);
   const [kelompokKeahlian, setKelompokKeahlian] = useState<KelompokKeahlian[]>([]);
@@ -449,10 +492,11 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
     setCreating(true);
     setCreateError(null);
     try {
+      const payload = dlbOnly ? toDlbPayload(createForm) : toPayload(createForm);
       const res = await fetch("/api/dosen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(toPayload(createForm)),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -460,7 +504,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
       }
       setCreateForm(EMPTY_FORM);
       setCreateOpen(false);
-      toast.success("Dosen created");
+      toast.success(dlbOnly ? "DLB berhasil ditambahkan" : "Dosen created");
       await loadDosen();
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : "Failed to create");
@@ -499,10 +543,11 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
     setSaving(true);
     setEditError(null);
     try {
+      const payload = dlbOnly ? toDlbPayload(editForm) : toPayload(editForm);
       const res = await fetch(`/api/dosen/${editingId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(toPayload(editForm)),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -550,37 +595,42 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
     }
   }
 
-  const columnCount = canEdit ? 13 : 12;
+  const hasActions = canEdit || canAddDlb;
+  const columnCount = hasActions ? 13 : 12;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Dosen</CardTitle>
-        {canEdit && (
+        {hasActions && (
           <div className="flex items-center gap-2">
-            <ConfirmDialog
-              trigger={
-                <Button variant="outline" disabled={generatingAccounts}>
-                  <UserPlus className="size-4" />
-                  {generatingAccounts ? "Generating…" : "Generate Dosen Accounts"}
-                </Button>
-              }
-              title="Generate login accounts for all dosen?"
-              description="Creates a DOSEN-role login for every dosen with an email and NIP that doesn't already have an account. Default passwords are derived from NIP and must be changed on first login. Dosen already provisioned are skipped."
-              confirmLabel="Generate"
-              variant="default"
-              onConfirm={onGenerateAccounts}
-            />
+            {canEdit && (
+              <ConfirmDialog
+                trigger={
+                  <Button variant="outline" disabled={generatingAccounts}>
+                    <UserPlus className="size-4" />
+                    {generatingAccounts ? "Generating…" : "Generate Dosen Accounts"}
+                  </Button>
+                }
+                title="Generate login accounts for all dosen?"
+                description="Creates a DOSEN-role login for every dosen with an email and NIP that doesn't already have an account. Default passwords are derived from NIP and must be changed on first login. Dosen already provisioned are skipped."
+                confirmLabel="Generate"
+                variant="default"
+                onConfirm={onGenerateAccounts}
+              />
+            )}
             <Sheet open={createOpen} onOpenChange={setCreateOpen}>
               <SheetTrigger asChild>
                 <Button>
                   <Plus className="size-4" />
-                  Add Dosen
+                  {dlbOnly ? "Tambah DLB" : "Add Dosen"}
                 </Button>
               </SheetTrigger>
               <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-lg">
                 <SheetHeader className="border-b border-border">
-                  <SheetTitle>Create Dosen</SheetTitle>
+                  <SheetTitle>
+                    {dlbOnly ? "Tambah Dosen Luar Biasa (DLB)" : "Create Dosen"}
+                  </SheetTitle>
                 </SheetHeader>
                 <form onSubmit={onCreate} className="flex flex-1 flex-col">
                   <div className="flex-1 space-y-4 p-4">
@@ -591,6 +641,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
                       kelompokKeahlian={kelompokKeahlian}
                       coeList={coeList}
                       idPrefix="create"
+                      dlbOnly={dlbOnly}
                     />
                     {createError && <p className="text-sm text-destructive">{createError}</p>}
                   </div>
@@ -748,7 +799,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
               <TableHead className="sticky top-0 bg-card">KK</TableHead>
               <TableHead className="sticky top-0 bg-card">COE</TableHead>
               <TableHead className="sticky top-0 bg-card">Status</TableHead>
-              {canEdit && (
+              {hasActions && (
                 <TableHead className="sticky top-0 bg-card text-right">Actions</TableHead>
               )}
             </TableRow>
@@ -787,15 +838,19 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
                   <TableCell>
                     <StatusBadge active={d.aktif} />
                   </TableCell>
-                  {canEdit && (
+                  {hasActions && (
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => startEdit(d)}>
-                          Edit
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => toggleActive(d)}>
-                          {d.aktif ? "Deactivate" : "Activate"}
-                        </Button>
+                        {canEdit && (
+                          <Button variant="outline" size="sm" onClick={() => toggleActive(d)}>
+                            {d.aktif ? "Deactivate" : "Activate"}
+                          </Button>
+                        )}
+                        {(canEdit || (canAddDlb && d.jenis === "DLB")) && (
+                          <Button variant="outline" size="sm" onClick={() => startEdit(d)}>
+                            Edit
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   )}
@@ -810,7 +865,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
         )}
       </CardContent>
 
-      {canEdit && (
+      {hasActions && (
         <Sheet open={editingId !== null} onOpenChange={(open) => !open && setEditingId(null)}>
           <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-lg">
             <SheetHeader className="border-b border-border">
@@ -825,6 +880,7 @@ export default function DosenClient({ canEdit }: { canEdit: boolean }) {
                   kelompokKeahlian={kelompokKeahlian}
                   coeList={coeList}
                   idPrefix="edit"
+                  dlbOnly={dlbOnly}
                 />
                 {editError && <p className="text-sm text-destructive">{editError}</p>}
               </div>
