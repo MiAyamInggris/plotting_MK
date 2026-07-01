@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -142,6 +142,7 @@ export default function BebanDosenTab({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pivotByDosen, setPivotByDosen] = useState<Record<string, Pivot>>({});
   const [pivotLoading, setPivotLoading] = useState<string | null>(null);
+  const [pivotErrors, setPivotErrors] = useState<Record<string, string>>({});
 
   // Restore persisted preferences once on mount -- localStorage isn't
   // available during SSR, so this can't run in a useState initializer.
@@ -218,25 +219,35 @@ export default function BebanDosenTab({
     localStorage.setItem(LS_PAGE_SIZE_KEY, String(size));
   }
 
-  async function toggleExpand(row: Row) {
+  async function fetchPivot(row: Row) {
+    if (!semesterId) return;
+    setPivotLoading(row.id);
+    setPivotErrors((prev) => { const n = { ...prev }; delete n[row.id]; return n; });
+    try {
+      const res = await fetch(
+        `/api/recap/pivot?kode=${encodeURIComponent(row.kode)}&semesterPeriodeId=${semesterId}`,
+      );
+      if (!res.ok) throw new Error("Failed to load detail");
+      const data = await res.json();
+      setPivotByDosen((prev) => ({ ...prev, [row.id]: data }));
+    } catch (e) {
+      setPivotErrors((prev) => ({
+        ...prev,
+        [row.id]: e instanceof Error ? e.message : "Failed to load",
+      }));
+    } finally {
+      setPivotLoading(null);
+    }
+  }
+
+  function toggleExpand(row: Row) {
     if (expandedId === row.id) {
       setExpandedId(null);
       return;
     }
     setExpandedId(row.id);
-    if (!pivotByDosen[row.id] && semesterId) {
-      setPivotLoading(row.id);
-      try {
-        const res = await fetch(
-          `/api/recap/pivot?kode=${encodeURIComponent(row.kode)}&semesterPeriodeId=${semesterId}`,
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setPivotByDosen((prev) => ({ ...prev, [row.id]: data }));
-        }
-      } finally {
-        setPivotLoading(null);
-      }
+    if (!pivotByDosen[row.id]) {
+      void fetchPivot(row);
     }
   }
 
@@ -256,7 +267,7 @@ export default function BebanDosenTab({
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">KK</Label>
-            <Select value={kkId} onValueChange={onFilterChange(setKkId)}>
+            <Select value={kkId} onValueChange={onFilterChange(setKkId)} disabled={loading}>
               <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>All</SelectItem>
@@ -268,7 +279,7 @@ export default function BebanDosenTab({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Homebase Prodi</Label>
-            <Select value={homebaseProdiId} onValueChange={onFilterChange(setHomebaseProdiId)}>
+            <Select value={homebaseProdiId} onValueChange={onFilterChange(setHomebaseProdiId)} disabled={loading}>
               <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>All</SelectItem>
@@ -448,10 +459,13 @@ export default function BebanDosenTab({
                     <TableCell className="font-medium">
                       <button
                         type="button"
-                        className="flex items-center gap-1 hover:underline"
+                        className="flex items-center gap-1 hover:underline disabled:cursor-not-allowed disabled:opacity-70"
                         onClick={() => toggleExpand(r)}
+                        disabled={pivotLoading === r.id}
                       >
-                        {expandedId === r.id ? (
+                        {pivotLoading === r.id ? (
+                          <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                        ) : expandedId === r.id ? (
                           <ChevronDown className="size-3.5 text-muted-foreground" />
                         ) : (
                           <ChevronRight className="size-3.5 text-muted-foreground" />
@@ -501,6 +515,18 @@ export default function BebanDosenTab({
                       <TableCell colSpan={9} className="bg-muted/20">
                         {pivotLoading === r.id ? (
                           <Skeleton className="h-24 w-full" />
+                        ) : pivotErrors[r.id] ? (
+                          <div className="flex items-center gap-3 py-2">
+                            <p className="text-sm text-destructive">{pivotErrors[r.id]}</p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void fetchPivot(r)}
+                            >
+                              Retry
+                            </Button>
+                          </div>
                         ) : pivotByDosen[r.id] ? (
                           <PivotResult pivot={pivotByDosen[r.id]} />
                         ) : (

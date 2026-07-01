@@ -10,6 +10,7 @@ import NavLinks from "@/components/NavLinks";
 import UserMenu from "@/components/UserMenu";
 import SemesterPicker from "@/components/SemesterPicker";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
+import NavigationProgress from "@/components/NavigationProgress";
 import { SemesterProvider, type SemesterOption } from "@/components/SemesterContext";
 import { navItemForPath } from "@/lib/nav";
 
@@ -34,6 +35,7 @@ export default function AppShell({
 
   return (
     <SemesterProvider semesters={semesters}>
+      <NavigationProgress />
       <div className="flex min-h-screen flex-col bg-background">
         {impersonation && (
           <ImpersonationBanner
