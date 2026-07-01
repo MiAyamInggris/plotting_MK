@@ -11,7 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { useSemester } from "@/components/SemesterContext";
-import DosenPicker, { type AssignContext, type DosenOption } from "../../DosenPicker";
+import DosenPicker, { type AssignContext, type DosenOption } from "../../../DosenPicker";
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Admin",
+  KETUA_KK: "Ketua KK",
+  KAPRODI: "Kaprodi",
+};
 
 type Dosen = { id: string; kode: string; nama: string; kkId: string | null; aktif: boolean };
 type Kelas = {
@@ -20,14 +26,9 @@ type Kelas = {
   sks: number;
   dosenId: string | null;
   dosen: Dosen | null;
-  assignedBy: { name: string } | null;
+  assignedBy: { name: string; role: string } | null;
 };
-type CourseOffering = {
-  id: string;
-  semesterKe: number;
-  tahunAngkatan: number;
-  kelas: Kelas[];
-};
+type CourseOffering = { id: string; semesterKe: number; tahunAngkatan: number; kelas: Kelas[] };
 type MataKuliahRow = {
   id: string;
   kodeMK: string;
@@ -38,6 +39,22 @@ type MataKuliahRow = {
 };
 type Prodi = { id: string; kode: string; nama: string };
 type RuleWarning = { level: "error" | "warning"; code: string; message: string };
+
+function formatAttribution(kelas: Kelas): string {
+  if (!kelas.assignedBy) return "Sudah Ditetapkan";
+  const roleLabel = ROLE_LABELS[kelas.assignedBy.role] ?? kelas.assignedBy.role;
+  return `Ditetapkan oleh ${roleLabel} ${kelas.assignedBy.name} · ${kelas.dosen?.kode ?? ""}`;
+}
+
+function semKeyLabel(semKey: string): string {
+  const [ke, angkatan] = semKey.split("-");
+  return `Sem ${ke} · Angkatan ${angkatan}`;
+}
+
+function parseSemKey(semKey: string) {
+  const [a, b] = semKey.split("-");
+  return { semesterKe: parseInt(a), tahunAngkatan: parseInt(b) };
+}
 
 function SectionChip({
   kelas,
@@ -79,9 +96,7 @@ function SectionChip({
       </span>
       <span className="text-muted-foreground">({kelas.sks} sks)</span>
       <Badge variant={kelas.dosen ? "success" : "warning"} className="text-[10px]">
-        {kelas.dosen
-          ? `Sudah Ditetapkan${kelas.assignedBy ? ` · ${kelas.assignedBy.name}` : ""}`
-          : "Belum Ditetapkan"}
+        {kelas.dosen ? formatAttribution(kelas) : "Belum Ditetapkan"}
       </Badge>
 
       {canEdit && (
@@ -119,11 +134,13 @@ function SectionChip({
 
 export default function ClassAssignmentClient({
   prodiId,
+  semKey,
   mataKuliahId,
   canEdit,
   canRegisterDlb,
 }: {
   prodiId: string;
+  semKey: string;
   mataKuliahId: string;
   canEdit: boolean;
   canRegisterDlb: boolean;
@@ -139,19 +156,34 @@ export default function ClassAssignmentClient({
   const [savingKelasId, setSavingKelasId] = useState<string | null>(null);
   const [warningsByKelas, setWarningsByKelas] = useState<Record<string, RuleWarning[]>>({});
 
+  const { semesterKe, tahunAngkatan } = parseSemKey(semKey);
+
   async function load() {
     if (!semesterId) return;
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`/api/plotting?prodiId=${prodiId}&semesterPeriodeId=${semesterId}&onlyOpened=true`);
-      if (!res.ok) throw new Error("Failed to load plotting data");
+      const res = await fetch(
+        `/api/plotting?prodiId=${prodiId}&semesterPeriodeId=${semesterId}&onlyOpened=true`,
+      );
+      if (!res.ok) throw new Error("Gagal memuat data plotting");
       const data = await res.json();
       setProdi(data.prodi);
-      setMk(data.mataKuliah.find((m: MataKuliahRow) => m.id === mataKuliahId) ?? null);
+      const found = data.mataKuliah.find((m: MataKuliahRow) => m.id === mataKuliahId) ?? null;
+      if (found) {
+        setMk({
+          ...found,
+          courseOfferings: found.courseOfferings.filter(
+            (co: CourseOffering) =>
+              co.semesterKe === semesterKe && co.tahunAngkatan === tahunAngkatan,
+          ),
+        });
+      } else {
+        setMk(null);
+      }
       setSemesterWritable(data.canWrite);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Failed to load plotting data");
+      setLoadError(e instanceof Error ? e.message : "Gagal memuat data plotting");
     } finally {
       setLoading(false);
     }
@@ -176,7 +208,7 @@ export default function ClassAssignmentClient({
     load();
     loadDosenOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prodiId, mataKuliahId, semesterId]);
+  }, [prodiId, mataKuliahId, semKey, semesterId]);
 
   const effectiveCanEdit = canEdit && semesterWritable;
 
@@ -195,10 +227,10 @@ export default function ClassAssignmentClient({
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to assign");
       setWarningsByKelas((prev) => ({ ...prev, [kelasId]: data.warnings ?? [] }));
-      toast.success("Dosen assigned");
+      toast.success("Dosen ditetapkan");
       await Promise.all([load(), loadDosenOptions()]);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to assign dosen");
+      toast.error(e instanceof Error ? e.message : "Gagal menetapkan dosen");
     } finally {
       setSavingKelasId(null);
     }
@@ -215,10 +247,10 @@ export default function ClassAssignmentClient({
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to clear");
       setWarningsByKelas((prev) => ({ ...prev, [kelasId]: [] }));
-      toast.success("Dosen cleared");
+      toast.success("Dosen dibatalkan");
       await Promise.all([load(), loadDosenOptions()]);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to clear dosen");
+      toast.error(e instanceof Error ? e.message : "Gagal membatalkan dosen");
     } finally {
       setSavingKelasId(null);
     }
@@ -228,19 +260,33 @@ export default function ClassAssignmentClient({
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb: Plotting / Prodi / Semester / MK */}
       <div className="flex flex-wrap items-center gap-1.5 text-sm">
-        <Link href="/plotting" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
+        <Link
+          href="/plotting"
+          className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+        >
           <ChevronLeft className="size-4" />
           Plotting
         </Link>
         {prodi && (
           <>
             <span className="text-muted-foreground">/</span>
-            <Link href={`/plotting/${prodiId}`} className="text-muted-foreground hover:text-foreground">
+            <Link
+              href={`/plotting/${prodiId}`}
+              className="text-muted-foreground hover:text-foreground"
+            >
               {prodi.kode} — {prodi.nama}
             </Link>
           </>
         )}
+        <span className="text-muted-foreground">/</span>
+        <Link
+          href={`/plotting/${prodiId}/${semKey}`}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          {semKeyLabel(semKey)}
+        </Link>
         {mk && (
           <>
             <span className="text-muted-foreground">/</span>
@@ -259,14 +305,16 @@ export default function ClassAssignmentClient({
       {!loading && !semesterWritable && canEdit && (
         <Alert>
           <AlertDescription>
-            This semester is read-only. Switch to the active semester to make changes.
+            Semester ini bersifat read-only. Aktifkan semester ini untuk melakukan perubahan.
           </AlertDescription>
         </Alert>
       )}
       {allWarnings.length > 0 && (
         <Alert className="border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
           <AlertDescription className="space-y-1 text-amber-800 dark:text-amber-400">
-            {allWarnings.map((w, i) => <p key={i}>{w.message}</p>)}
+            {allWarnings.map((w, i) => (
+              <p key={i}>{w.message}</p>
+            ))}
           </AlertDescription>
         </Alert>
       )}
@@ -278,7 +326,7 @@ export default function ClassAssignmentClient({
       ) : !mk ? (
         <Card>
           <CardContent>
-            <EmptyState icon={CalendarRange} title="Mata Kuliah not found" />
+            <EmptyState icon={CalendarRange} title="Mata Kuliah tidak ditemukan" />
           </CardContent>
         </Card>
       ) : (
@@ -294,7 +342,9 @@ export default function ClassAssignmentClient({
             </div>
             <div className="mt-2 flex flex-col gap-2">
               {mk.courseOfferings.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No classes opened yet for this Mata Kuliah.</p>
+                <p className="text-xs text-muted-foreground">
+                  Belum ada kelas yang dibuka untuk mata kuliah ini.
+                </p>
               ) : (
                 [...mk.courseOfferings]
                   .sort((a, b) => b.tahunAngkatan - a.tahunAngkatan || a.semesterKe - b.semesterKe)

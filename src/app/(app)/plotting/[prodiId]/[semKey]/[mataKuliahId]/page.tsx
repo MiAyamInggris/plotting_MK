@@ -6,9 +6,9 @@ import ClassAssignmentClient from "./ClassAssignmentClient";
 export default async function ClassAssignmentPage({
   params,
 }: {
-  params: Promise<{ prodiId: string; mataKuliahId: string }>;
+  params: Promise<{ prodiId: string; semKey: string; mataKuliahId: string }>;
 }) {
-  const { prodiId, mataKuliahId } = await params;
+  const { prodiId, semKey, mataKuliahId } = await params;
   const user = await getSessionUser();
   if (user?.role === "ACADEMIC") redirect("/recap");
   const canEdit = !!user && (user.role === "ADMIN" || user.role === "KETUA_KK");
@@ -17,11 +17,12 @@ export default async function ClassAssignmentPage({
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
         {canEdit
-          ? "Assign or reassign dosen to course sections for the active semester."
-          : "Read-only view of the current plotting."}
+          ? "Tetapkan atau ubah dosen pengampu untuk kelas berikut."
+          : "Tampilan read-only plotting saat ini."}
       </p>
       <ClassAssignmentClient
         prodiId={prodiId}
+        semKey={semKey}
         mataKuliahId={mataKuliahId}
         canEdit={canEdit}
         canRegisterDlb={canRegisterDlb(user)}

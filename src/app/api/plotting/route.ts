@@ -19,7 +19,7 @@ type MataKuliahPayload = {
       sks: number;
       dosenId: string | null;
       dosen: { id: string; kode: string; nama: string; kkId: string | null; aktif: boolean } | null;
-      assignedBy: { name: string } | null;
+      assignedBy: { name: string; role: string } | null;
     }[];
   }[];
 };
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
       include: {
         courseOffering: { include: { mataKuliah: true } },
         dosen: { select: { id: true, kode: true, nama: true, kkId: true, aktif: true } },
-        assignedBy: { select: { name: true } },
+        assignedBy: { select: { name: true, role: true } },
       },
     });
 
@@ -111,7 +111,7 @@ export async function GET(request: Request) {
                 dosen: {
                   select: { id: true, kode: true, nama: true, kkId: true, aktif: true },
                 },
-                assignedBy: { select: { name: true } },
+                assignedBy: { select: { name: true, role: true } },
               },
             },
           },
