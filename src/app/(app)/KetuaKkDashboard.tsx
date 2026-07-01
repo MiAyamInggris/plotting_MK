@@ -26,6 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/EmptyState";
 import { useSemester } from "@/components/SemesterContext";
 import { JFA_GROUPS, type JfaGroup } from "@/lib/dosenRatios";
+import ProdiHeatmap from "./ProdiHeatmap";
 
 type ProdiRatio = {
   prodiId: string;
@@ -159,7 +160,9 @@ export default function KetuaKkDashboard() {
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <ProdiHeatmap />
+
       <div className="space-y-1.5">
         <Label className="text-xs text-muted-foreground">Prodi</Label>
         <Select value={prodiFilter} onValueChange={setProdiFilter}>
@@ -177,15 +180,15 @@ export default function KetuaKkDashboard() {
         <EmptyState icon={Users} title="No prodi found" />
       ) : (
         <>
-          <StackedRatioChart title="DLB vs Tetap" data={dlbTetapData} keys={["Tetap", "DLB"]} colors={["#64748B", "#ED1E28"]} />
+          <StackedRatioChart title="Perbandingan DLB dan DTPR (Dosen Tetap Pembagi Rasio)" data={dlbTetapData} keys={["Tetap", "DLB"]} colors={["#64748B", "#ED1E28"]} />
           <StackedRatioChart
-            title="Pendidikan (tetap only)"
+            title="Rasio Jenjang Pendidikan Dosen (S2 / S3)"
             data={pendidikanData}
             keys={["S2", "S3", "Sedang S3"]}
             colors={["#64748B", "#B6252A", "#A0AAB8"]}
           />
           <StackedRatioChart
-            title="JFA (tetap only)"
+            title="Rasio Jabatan Fungsional Akademik (JFA)"
             data={jfaData}
             keys={[...JFA_GROUPS]}
             colors={JFA_GROUPS.map((g) => JFA_COLORS[g])}

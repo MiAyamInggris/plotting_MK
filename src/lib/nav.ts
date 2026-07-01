@@ -58,7 +58,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     href: "/setting-mk-kelas",
-    label: "Setting MK dan Kelas",
+    label: "Pengaturan Mata Kuliah dan Kelas",
     roles: ["ADMIN", "KAPRODI"],
     icon: Settings2,
     group: "Master Data",

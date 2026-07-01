@@ -33,8 +33,8 @@ export default function RecapClient({
     <Tabs defaultValue="beban-dosen" className="gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <TabsList>
-          <TabsTrigger value="beban-dosen">Beban Dosen</TabsTrigger>
-          <TabsTrigger value="kelas-by-semester">Kelas per Semester</TabsTrigger>
+          <TabsTrigger value="beban-dosen">Rekapitulasi Beban Dosen</TabsTrigger>
+          <TabsTrigger value="kelas-by-semester">Rekapitulasi Kelas per Semester</TabsTrigger>
           <TabsTrigger value="prodi-summary">Per-Prodi Summary</TabsTrigger>
           <TabsTrigger value="pivot">Pivot Individu</TabsTrigger>
         </TabsList>

@@ -85,12 +85,12 @@ export default function ProdiListClient() {
               {p.kode} — {p.nama}
             </p>
             <p className="text-xs text-muted-foreground">
-              {p.plottedKelas}/{p.totalKelas} kelas sudah di-plotting
+              {p.plottedKelas}/{p.totalKelas} kelas sudah ditetapkan pengampu
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Badge variant={p.unplottedKelas > 0 ? "secondary" : "default"}>
-              {p.unplottedKelas} kelas / {p.unplottedSks} SKS belum di-plotting
+              {p.unplottedKelas} kelas / {p.unplottedSks} SKS belum ditetapkan pengampu
             </Badge>
             <ChevronRight className="size-4 text-muted-foreground" />
           </div>

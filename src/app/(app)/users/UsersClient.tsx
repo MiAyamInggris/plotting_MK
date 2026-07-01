@@ -326,12 +326,12 @@ export default function UsersClient() {
                             <ConfirmDialog
                               trigger={
                                 <Button variant="outline" size="sm">
-                                  Reset Password
+                                  Atur Ulang Kata Sandi
                                 </Button>
                               }
-                              title={`Reset password for ${d.kode}?`}
-                              description="Password akan direset ke NIP sebelum tanda '-' (mis. 19910017-1 → 19910017). Dosen harus mengganti password saat login berikutnya."
-                              confirmLabel="Reset"
+                              title={`Atur ulang kata sandi ${d.kode}?`}
+                              description="Kata sandi akan direset ke NIP sebelum tanda '-' (mis. 19910017-1 → 19910017). Dosen harus mengganti kata sandi saat login berikutnya."
+                              confirmLabel="Atur Ulang"
                               variant="default"
                               onConfirm={() => resetPassword(d)}
                             />
@@ -340,7 +340,7 @@ export default function UsersClient() {
                               <TooltipTrigger asChild>
                                 <span tabIndex={0}>
                                   <Button variant="outline" size="sm" disabled>
-                                    Reset Password
+                                    Atur Ulang Kata Sandi
                                   </Button>
                                 </span>
                               </TooltipTrigger>

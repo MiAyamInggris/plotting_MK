@@ -111,7 +111,7 @@ function ClassRow({
         <>
           <span className="font-mono font-medium">{row.kodeKelas}</span>
           <Badge variant={plotted ? "default" : "secondary"} className="text-[10px]">
-            {plotted ? "Sudah di-plotting" : "Belum di-plotting"}
+            {plotted ? "Sudah Ditetapkan" : "Belum Ditetapkan"}
           </Badge>
           {canWrite && !plotted && (
             <>
@@ -124,8 +124,8 @@ function ClassRow({
                     <Trash2 className="size-3" />
                   </Button>
                 }
-                title="Remove this class?"
-                description={`Class ${row.kodeKelas} will be permanently removed. This cannot be undone.`}
+                title="Batal Buka Kelas?"
+                description={`Kelas ${row.kodeKelas} akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.`}
                 onConfirm={onRemove}
               />
             </>
@@ -264,7 +264,7 @@ export default function SettingMkKelasClient({
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-        <CardTitle>Setting MK dan Kelas</CardTitle>
+        <CardTitle>Pengaturan Mata Kuliah dan Kelas</CardTitle>
         {!isKaprodi && (
           <Select value={selectedProdiId} onValueChange={setSelectedProdiId}>
             <SelectTrigger className="w-56">
@@ -418,7 +418,7 @@ export default function SettingMkKelasClient({
                               </div>
                               <Button type="submit" variant="outline" size="sm">
                                 <Plus className="size-4" />
-                                {rows.length === 0 ? "Open this MK for this semester" : "Open another class"}
+                                {rows.length === 0 ? "Buka MK untuk Semester Ini" : "Tambah Kelas"}
                               </Button>
                             </form>
                           )}

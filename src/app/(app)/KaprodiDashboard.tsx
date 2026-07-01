@@ -140,9 +140,9 @@ export default function KaprodiDashboard() {
         <p className="text-xs text-muted-foreground">{data.totalDosen} dosen plotted this semester</p>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        <DonutCard title="DLB vs Tetap" data={dlbTetapData} />
-        <DonutCard title="Pendidikan" data={pendidikanData} caption="Tetap only" />
-        <DonutCard title="JFA" data={jfaData} caption="Tetap only" />
+        <DonutCard title="Perbandingan DLB dan DTPR" data={dlbTetapData} caption="Dosen Tetap Pembagi Rasio (DTPR)" />
+        <DonutCard title="Rasio Jenjang Pendidikan (S2 / S3)" data={pendidikanData} caption="Dosen tetap saja" />
+        <DonutCard title="Rasio Jabatan Fungsional Akademik (JFA)" data={jfaData} caption="Dosen tetap saja" />
       </div>
     </div>
   );

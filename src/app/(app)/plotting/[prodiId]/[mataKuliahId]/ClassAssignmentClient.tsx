@@ -75,13 +75,13 @@ function SectionChip({
       </span>
       <span className="font-mono font-medium">{kelas.kodeKelas}</span>
       <span className={kelas.dosen ? "text-foreground" : "text-muted-foreground italic"}>
-        {kelas.dosen ? `${kelas.dosen.kode} — ${kelas.dosen.nama}` : "unassigned"}
+        {kelas.dosen ? `${kelas.dosen.kode} — ${kelas.dosen.nama}` : "Belum ditetapkan"}
       </span>
       <span className="text-muted-foreground">({kelas.sks} sks)</span>
       <Badge variant={kelas.dosen ? "default" : "secondary"} className="text-[10px]">
         {kelas.dosen
-          ? `Sudah di-plotting${kelas.assignedBy ? ` · ${kelas.assignedBy.name}` : ""}`
-          : "Belum di-plotting"}
+          ? `Sudah Ditetapkan${kelas.assignedBy ? ` · ${kelas.assignedBy.name}` : ""}`
+          : "Belum Ditetapkan"}
       </Badge>
 
       {canEdit && (

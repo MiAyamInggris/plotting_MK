@@ -124,7 +124,7 @@ export default function UserMenu({
           {role === "ADMIN" && (
             <>
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                View as
+                Lihat Sebagai
               </DropdownMenuLabel>
               {VIEW_AS_ROLES.map((r) => (
                 <DropdownMenuItem key={r} onClick={() => openViewAs(r)}>
@@ -148,7 +148,7 @@ export default function UserMenu({
       <Dialog open={viewAsRole !== null} onOpenChange={(open) => !open && setViewAsRole(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>View as {viewAsRole ? ROLE_LABEL[viewAsRole] : ""}</DialogTitle>
+            <DialogTitle>Lihat Sebagai {viewAsRole ? ROLE_LABEL[viewAsRole] : ""}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {viewAsRole === "KAPRODI" && (

@@ -170,10 +170,10 @@ export default function KelasBySemesterTab({
                     </div>
                     {g.unassignedKelas > 0 ? (
                       <Badge variant="destructive">
-                        {g.unassignedKelas} kelas belum di-plotting ({g.unassignedSks} sks)
+                        {g.unassignedKelas} kelas belum ditetapkan pengampu ({g.unassignedSks} sks)
                       </Badge>
                     ) : (
-                      <Badge>Fully plotted</Badge>
+                      <Badge>Semua Kelas Telah Ditetapkan</Badge>
                     )}
                   </button>
                   {expanded === g.semesterKe && (
@@ -191,7 +191,7 @@ export default function KelasBySemesterTab({
                               {k.dosen.kode} — {k.dosen.nama}
                             </span>
                           ) : (
-                            <span className="italic text-muted-foreground">Belum di-plotting</span>
+                            <span className="italic text-muted-foreground">Belum Ditetapkan</span>
                           )}
                         </span>
                       ))}

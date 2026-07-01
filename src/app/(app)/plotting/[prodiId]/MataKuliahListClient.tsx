@@ -133,7 +133,7 @@ export default function MataKuliahListClient({ prodiId }: { prodiId: string }) {
                             )}
                           </span>
                         ) : (
-                          <span className="italic text-muted-foreground">Belum di-plotting</span>
+                          <span className="italic text-muted-foreground">Belum Ditetapkan</span>
                         )}
                       </span>
                     ))}
