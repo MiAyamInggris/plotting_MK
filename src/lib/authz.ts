@@ -48,11 +48,12 @@ export function canViewPlotting(user: AuthUser | null | undefined): boolean {
 
 /**
  * Ketua KK may assign/clear a dosen on a section, restricted to dosen in their own KK.
+ * DLB dosen are globally assignable — KK-scope restriction does not apply (R22).
  * Admin may plot as a superuser and override the cross-KK restriction.
  */
 export function canPlot(
   user: AuthUser | null | undefined,
-  dosen: { kkId?: string | null } | null | undefined,
+  dosen: { kkId?: string | null; jenis?: string | null } | null | undefined,
 ): { allowed: boolean; reason?: string } {
   if (!user) return { allowed: false, reason: "Not authenticated" };
 
@@ -64,6 +65,9 @@ export function canPlot(
 
   // Clearing an assignment (no dosen) is always allowed for a Ketua KK.
   if (!dosen) return { allowed: true };
+
+  // DLB are globally assignable — not restricted to the creator's KK.
+  if (dosen.jenis === "DLB") return { allowed: true };
 
   const sameKk = !dosen.kkId || dosen.kkId === user.kkId;
   if (!sameKk && CROSS_KK_RULE.blockForKetuaKk) {

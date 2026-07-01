@@ -19,7 +19,11 @@ export async function GET(request: Request) {
   const dosenList = await prisma.dosen.findMany({
     where: {
       aktif: true,
-      ...(user.role === "KETUA_KK" ? { kkId: user.kkId } : {}),
+      // DLB are globally plottable (R22): Ketua KK sees their own KK's tetap
+      // dosen plus all DLB regardless of which KK registered them.
+      ...(user.role === "KETUA_KK"
+        ? { OR: [{ kkId: user.kkId }, { jenis: "DLB" }] }
+        : {}),
     },
     orderBy: { kode: "asc" },
     select: {

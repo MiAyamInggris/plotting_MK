@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     action: "DLB_CREATE",
     entityType: "Dosen",
     entityId: created.id,
-    detail: created.kode,
+    detail: `${created.kode} — ${created.nama}`,
     request,
   });
 
