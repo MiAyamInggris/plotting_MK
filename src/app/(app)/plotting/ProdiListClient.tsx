@@ -89,9 +89,13 @@ export default function ProdiListClient() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant={p.unplottedKelas > 0 ? "secondary" : "default"}>
-              {p.unplottedKelas} kelas / {p.unplottedSks} SKS belum ditetapkan pengampu
-            </Badge>
+            {p.unplottedKelas === 0 ? (
+              <Badge variant="success">Semua Sudah Ditetapkan</Badge>
+            ) : (
+              <Badge variant="warning">
+                {p.unplottedKelas} kelas / {p.unplottedSks} SKS belum ditetapkan
+              </Badge>
+            )}
             <ChevronRight className="size-4 text-muted-foreground" />
           </div>
         </Link>

@@ -110,7 +110,7 @@ function ClassRow({
       ) : (
         <>
           <span className="font-mono font-medium">{row.kodeKelas}</span>
-          <Badge variant={plotted ? "default" : "secondary"} className="text-[10px]">
+          <Badge variant={plotted ? "success" : "warning"} className="text-[10px]">
             {plotted ? "Sudah Ditetapkan" : "Belum Ditetapkan"}
           </Badge>
           {canWrite && !plotted && (

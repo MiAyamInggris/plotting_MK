@@ -77,8 +77,8 @@ const LS_PAGE_SIZE_KEY = "bebanDosen.tablePageSize";
 // Telkom red family for over-quota bars, neutral slate for within-quota --
 // the struktural segment stays one shade lighter than teaching so the two
 // are distinguishable within a stacked bar.
-const COLOR_TEACHING_OVER = "#ED1E28";
-const COLOR_STRUKTURAL_OVER = "#B6252A";
+const COLOR_TEACHING_OVER = "#DC2626";
+const COLOR_STRUKTURAL_OVER = "#B91C1C";
 const COLOR_TEACHING_IN = "#64748B";
 const COLOR_STRUKTURAL_IN = "#A0AAB8";
 

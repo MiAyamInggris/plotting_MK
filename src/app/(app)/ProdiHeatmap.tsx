@@ -47,11 +47,11 @@ function getCellColor(cell: HeatmapCell, metric: Metric): string {
 
   if (metric === "unplotted") {
     const pct = cell.jumlahKelas > 0 ? (cell.unassignedKelas / cell.jumlahKelas) * 100 : 0;
-    if (pct === 0) return "#E5E7EB"; // all plotted — neutral gray
-    if (pct <= 25) return "#FCA5A5"; // light red
-    if (pct <= 50) return "#F87171"; // medium red
-    if (pct <= 75) return "#ED1E28"; // Telkom red
-    return "#B6252A"; // maroon — many unplotted
+    if (pct === 0) return "#16A34A"; // all plotted — success green
+    if (pct <= 25) return "#FEF3C7"; // few unplotted — amber-100
+    if (pct <= 50) return "#FCD34D"; // some unplotted — amber-300
+    if (pct <= 75) return "#F59E0B"; // many unplotted — amber-500
+    return "#DC2626"; // most/all unplotted — danger red
   }
 
   if (metric === "pctComplete") {
@@ -76,11 +76,11 @@ function getCellColor(cell: HeatmapCell, metric: Metric): string {
 function getLegendSteps(metric: Metric): { color: string; label?: string }[] {
   if (metric === "unplotted") {
     return [
-      { color: "#E5E7EB", label: "0" },
-      { color: "#FCA5A5" },
-      { color: "#F87171" },
-      { color: "#ED1E28" },
-      { color: "#B6252A" },
+      { color: "#16A34A", label: "0%" },
+      { color: "#FEF3C7" },
+      { color: "#FCD34D" },
+      { color: "#F59E0B" },
+      { color: "#DC2626", label: "100%" },
     ];
   }
   if (metric === "pctComplete") {
@@ -275,11 +275,11 @@ export default function ProdiHeatmap() {
               <div className="flex items-center gap-3 text-sm">
                 <span className="text-muted-foreground">{drilldown.cell.jumlahKelas} kelas · {drilldown.cell.totalSks} SKS</span>
                 {drilldown.cell.unassignedKelas > 0 ? (
-                  <Badge variant="destructive">
+                  <Badge variant="warning">
                     {drilldown.cell.unassignedKelas} belum ditetapkan pengampu
                   </Badge>
                 ) : (
-                  <Badge>Semua kelas telah ditetapkan</Badge>
+                  <Badge variant="success">Semua kelas telah ditetapkan</Badge>
                 )}
               </div>
               <div className="divide-y divide-border rounded-md border border-border">

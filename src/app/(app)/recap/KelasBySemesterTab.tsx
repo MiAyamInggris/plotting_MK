@@ -169,11 +169,11 @@ export default function KelasBySemesterTab({
                       </span>
                     </div>
                     {g.unassignedKelas > 0 ? (
-                      <Badge variant="destructive">
+                      <Badge variant="warning">
                         {g.unassignedKelas} kelas belum ditetapkan pengampu ({g.unassignedSks} sks)
                       </Badge>
                     ) : (
-                      <Badge>Semua Kelas Telah Ditetapkan</Badge>
+                      <Badge variant="success">Semua Kelas Telah Ditetapkan</Badge>
                     )}
                   </button>
                   {expanded === g.semesterKe && (

@@ -78,7 +78,7 @@ function SectionChip({
         {kelas.dosen ? `${kelas.dosen.kode} — ${kelas.dosen.nama}` : "Belum ditetapkan"}
       </span>
       <span className="text-muted-foreground">({kelas.sks} sks)</span>
-      <Badge variant={kelas.dosen ? "default" : "secondary"} className="text-[10px]">
+      <Badge variant={kelas.dosen ? "success" : "warning"} className="text-[10px]">
         {kelas.dosen
           ? `Sudah Ditetapkan${kelas.assignedBy ? ` · ${kelas.assignedBy.name}` : ""}`
           : "Belum Ditetapkan"}
